@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BadgeCheck,
@@ -961,7 +962,7 @@ export function NametagApp() {
                 />
               )}
               {view === "share" && activeCard && (
-                <ShareScreen publicUrl={publicUrl} />
+                <ShareScreen publicUrl={publicUrl} onBack={() => setView("card")} />
               )}
               {view === "debrief" && activeCard && (
                 <DebriefScreen
@@ -3282,9 +3283,20 @@ function followUpWindowLabel(window?: Contact["followUpWindow"]) {
   return "Suggested timing: choose a time";
 }
 
-function ShareScreen({ publicUrl }: { publicUrl: string }) {
+function ShareScreen({ publicUrl, onBack }: { publicUrl: string; onBack: () => void }) {
   return (
-    <div className="flex min-h-[calc(100dvh-180px)] items-center justify-center lg:min-h-[calc(100dvh-136px)]">
+    <div className="flex min-h-[calc(100dvh-180px)] flex-col items-center justify-center gap-4 lg:min-h-[calc(100dvh-136px)]">
+      <div className="flex w-full max-w-[min(90vw,460px)] items-center justify-between">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-xs font-black text-slate-600 transition hover:bg-wash hover:text-ink"
+        >
+          <ArrowLeft className="size-3.5" />
+          Back to card
+        </button>
+        <span className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-slate-soft">Your QR</span>
+      </div>
       <QRShare publicUrl={publicUrl} />
     </div>
   );
