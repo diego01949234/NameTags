@@ -2188,6 +2188,8 @@ function PrepScreen({
   onEventScreenshotRemove,
   eventGoal,
   setEventGoal,
+  eventFocus,
+  setEventFocus,
   hasPrivateContext,
   onOpenSettings,
   isGenerating,
