@@ -179,6 +179,9 @@ export function NametagApp() {
   const [publishError, setPublishError] = useState("");
   const [origin, setOrigin] = useState("http://localhost:3000");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
+  const [deleteEventError, setDeleteEventError] = useState("");
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!authConfigured);
@@ -819,6 +822,53 @@ export function NametagApp() {
     setView("home");
   }
 
+  function requestEventDeletion(eventId: string) {
+    const event = state.events.find((item) => item.id === eventId);
+    if (!event) return;
+    setDeleteEventError("");
+    setEventToDelete(event);
+  }
+
+  async function deleteEvent() {
+    if (!eventToDelete || isDeletingEvent) return;
+
+    const targetEvent = eventToDelete;
+    const cardsToRemove = state.cards.filter((card) => card.eventId === targetEvent.id);
+    setIsDeletingEvent(true);
+    setDeleteEventError("");
+
+    try {
+      // Public cards are removed first. If this fails, keep the private event so
+      // the owner can retry rather than accidentally leave a live QR behind.
+      for (const card of cardsToRemove) {
+        if (!card.ownerSyncKey) continue;
+        const response = await fetch(`/api/public-card/${card.id}`, {
+          method: "DELETE",
+          headers: { "x-nametag-owner-key": card.ownerSyncKey }
+        });
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        if (!response.ok) {
+          throw new Error(payload?.error ?? "We could not remove this public QR card.");
+        }
+      }
+
+      const remainingWorkspace = removeEventFromWorkspace(state, targetEvent.id);
+      setState(remainingWorkspace);
+      setActiveCardId(remainingWorkspace.cards[0]?.id ?? "");
+      setHasOnboarded(hasWorkspaceContent(remainingWorkspace));
+      setView("home");
+      setEventToDelete(null);
+    } catch (error) {
+      setDeleteEventError(
+        error instanceof Error
+          ? error.message
+          : "We could not delete this event. Please try again."
+      );
+    } finally {
+      setIsDeletingEvent(false);
+    }
+  }
+
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
     setMenuOpen(false);
@@ -831,6 +881,7 @@ export function NametagApp() {
     setActiveCardId("");
     setView("home");
     setDemoMode(false);
+    setEventToDelete(null);
     setPasswordRecoveryMode(false);
     demoWorkspaceRef.current = null;
   }
@@ -986,6 +1037,7 @@ export function NametagApp() {
                   startDemoEvent={startDemoEvent}
                   removeSampleEvents={removeSampleEvents}
                   canRemoveSampleEvents={!demoMode && session?.user.email !== "demo@nametag.app"}
+                  onDeleteEvent={requestEventDeletion}
                 />
               )}
               {view === "prep" && (
@@ -1100,6 +1152,17 @@ export function NametagApp() {
             </div>
       </section>
       </div>
+      <DeleteEventDialog
+        event={eventToDelete}
+        isDeleting={isDeletingEvent}
+        error={deleteEventError}
+        onCancel={() => {
+          if (isDeletingEvent) return;
+          setDeleteEventError("");
+          setEventToDelete(null);
+        }}
+        onConfirm={() => void deleteEvent()}
+      />
     </main>
   );
 }
@@ -1188,6 +1251,24 @@ function hasWorkspaceContent(workspace: NametagState) {
       workspace.links.length ||
       workspace.events.length
   );
+}
+
+function removeEventFromWorkspace(workspace: NametagState, eventId: string): NametagState {
+  const cardIds = new Set(workspace.cards.filter((card) => card.eventId === eventId).map((card) => card.id));
+  const contactIds = new Set(
+    workspace.contacts
+      .filter((contact) => contact.eventId === eventId || cardIds.has(contact.cardId))
+      .map((contact) => contact.id)
+  );
+
+  return {
+    ...workspace,
+    events: workspace.events.filter((event) => event.id !== eventId),
+    cards: workspace.cards.filter((card) => !cardIds.has(card.id)),
+    contacts: workspace.contacts.filter((contact) => !contactIds.has(contact.id)),
+    followUps: workspace.followUps.filter((followUp) => !contactIds.has(followUp.contactId)),
+    eventNotes: (workspace.eventNotes ?? []).filter((note) => note.eventId !== eventId)
+  };
 }
 
 function buildPublicCard(card: NametagCard, event: Event, state: NametagState): PublicCard {
@@ -1563,6 +1644,59 @@ function AppMenu({
   );
 }
 
+function DeleteEventDialog({
+  event,
+  isDeleting,
+  error,
+  onCancel,
+  onConfirm
+}: {
+  event: Event | null;
+  isDeleting: boolean;
+  error: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!event) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end bg-ink/45 p-3 backdrop-blur-[2px] sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="delete-event-title">
+      <section className="w-full max-w-[420px] rounded-lg border border-ink bg-white shadow-2xl">
+        <div className="border-b border-line px-4 py-4">
+          <div className="font-badge-mono text-[10px] font-black uppercase text-coral">Delete event</div>
+          <h2 id="delete-event-title" className="mt-1 text-lg font-black text-ink">Delete &quot;{conciseEventName(event.name)}&quot;?</h2>
+        </div>
+        <div className="space-y-3 px-4 py-4">
+          <p className="text-sm font-semibold leading-6 text-slate-600">
+            Its public QR pass will stop working first. Then its connections, private notes, and follow-up drafts will be removed from this workspace.
+          </p>
+          <p className="text-xs font-bold text-coral">This cannot be undone.</p>
+          {error && <p className="rounded-md border border-coral/30 bg-coral/5 px-3 py-2 text-xs font-bold leading-5 text-coral">{error}</p>}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-line bg-wash px-4 py-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="inline-flex min-h-10 items-center justify-center rounded-md border border-line bg-white px-3 text-sm font-black text-ink transition hover:border-ink disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Keep event
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-coral px-3 text-sm font-black text-white transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isDeleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+            {isDeleting ? "Removing QR..." : "Delete event"}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function AppBottomNav({
   view,
   onOpenEvents,
@@ -1782,7 +1916,8 @@ function EventsHomeScreen({
   startNewEvent,
   startDemoEvent,
   removeSampleEvents,
-  canRemoveSampleEvents
+  canRemoveSampleEvents,
+  onDeleteEvent
 }: {
   state: NametagState;
   activeCardId?: string;
@@ -1791,6 +1926,7 @@ function EventsHomeScreen({
   startDemoEvent: () => void;
   removeSampleEvents: () => void;
   canRemoveSampleEvents: boolean;
+  onDeleteEvent: (eventId: string) => void;
 }) {
   const activeCard = state.cards.find((card) => card.id === activeCardId) ?? state.cards[0];
   const activeEvent = activeCard
@@ -1880,6 +2016,7 @@ function EventsHomeScreen({
           ).length}
           selectCard={selectCard}
           startNewEvent={startNewEvent}
+          onDeleteEvent={onDeleteEvent}
         />
       )}
 
@@ -1887,6 +2024,7 @@ function EventsHomeScreen({
         cards={savedCards}
         state={state}
         selectCard={selectCard}
+        onDeleteEvent={onDeleteEvent}
       />
     </div>
   );
@@ -1895,11 +2033,13 @@ function EventsHomeScreen({
 function EventHistorySections({
   cards,
   state,
-  selectCard
+  selectCard,
+  onDeleteEvent
 }: {
   cards: NametagCard[];
   state: NametagState;
   selectCard: (cardId: string, nextView?: View) => void;
+  onDeleteEvent: (eventId: string) => void;
 }) {
   const now = Date.now();
   const groups = [
@@ -1935,21 +2075,31 @@ function EventHistorySections({
                   (contact) => (state.followUps.find((followUp) => followUp.contactId === contact.id)?.status ?? "to_send") === "to_send"
                 ).length;
                 return (
-                  <button
-                    type="button"
-                    onClick={() => selectCard(card.id, "brief")}
-                    key={card.id}
-                    className="flex w-full items-center gap-3 rounded-lg border border-line bg-wash p-3 text-left transition hover:border-ink hover:bg-white"
-                  >
-                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-ink text-mint">
-                      <CalendarDays className="size-4" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-black text-ink">{event?.name ?? "Untitled event"}</span>
-                      <span className="mt-1 block text-xs font-bold text-slate-soft">{pending ? `${pending} follow-ups waiting` : `${contacts.length} connections`}</span>
-                    </span>
-                    <ArrowRight className="size-4 shrink-0 text-slate-400" />
-                  </button>
+                  <div key={card.id} className="flex items-stretch gap-2">
+                    <button
+                      type="button"
+                      onClick={() => selectCard(card.id, "brief")}
+                      className="flex min-w-0 flex-1 items-center gap-3 rounded-lg border border-line bg-wash p-3 text-left transition hover:border-ink hover:bg-white"
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-ink text-mint">
+                        <CalendarDays className="size-4" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-black text-ink">{event?.name ?? "Untitled event"}</span>
+                        <span className="mt-1 block text-xs font-bold text-slate-soft">{pending ? `${pending} follow-ups waiting` : `${contacts.length} connections`}</span>
+                      </span>
+                      <ArrowRight className="size-4 shrink-0 text-slate-400" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteEvent(card.eventId)}
+                      className="grid min-h-11 w-11 shrink-0 place-items-center rounded-lg border border-line bg-white text-slate-400 transition hover:border-coral hover:bg-coral/5 hover:text-coral"
+                      title={`Delete ${event?.name ?? "event"}`}
+                      aria-label={`Delete ${event?.name ?? "event"}`}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 );
               })}
             </div>
@@ -1968,7 +2118,8 @@ function CompactEventSummary({
   contactsCount,
   pendingCount,
   selectCard,
-  startNewEvent
+  startNewEvent,
+  onDeleteEvent
 }: {
   card: NametagCard;
   event: Event;
@@ -1976,6 +2127,7 @@ function CompactEventSummary({
   pendingCount: number;
   selectCard: (cardId: string, nextView?: View) => void;
   startNewEvent: () => void;
+  onDeleteEvent: (eventId: string) => void;
 }) {
   const primaryView: View = "brief";
   const activityLabel = pendingCount > 0
@@ -2020,6 +2172,15 @@ function CompactEventSummary({
           aria-label="Show QR"
         >
           <QrCode className="size-4" />
+        </button>
+        <button
+          type="button"
+          onClick={() => onDeleteEvent(event.id)}
+          className="grid size-10 shrink-0 place-items-center rounded-md border border-line bg-white text-slate-400 transition hover:border-coral hover:bg-coral/5 hover:text-coral"
+          title="Delete event"
+          aria-label="Delete event"
+        >
+          <Trash2 className="size-4" />
         </button>
       </div>
     </section>

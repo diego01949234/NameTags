@@ -1,4 +1,4 @@
-import { getPublicCard, upsertPublicCard } from "@/lib/server/public-store";
+import { deletePublicCard, getPublicCard, upsertPublicCard } from "@/lib/server/public-store";
 import type { PublicCard } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -45,6 +45,31 @@ export async function POST(
       {
         ok: false,
         error: "Public publishing is unavailable. Connect Supabase before using this QR across devices."
+      },
+      { status: 503 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ cardId: string }> }
+) {
+  const { cardId } = await params;
+  const ownerSyncKey = cleanText(request.headers.get("x-nametag-owner-key"), 96);
+  if (!ownerSyncKey) {
+    return Response.json({ ok: false, error: "Owner authorization is required." }, { status: 401 });
+  }
+
+  try {
+    const result = await deletePublicCard(cardId, ownerSyncKey);
+    return Response.json({ ok: true, ...result });
+  } catch (error) {
+    console.error("Could not delete public card", error);
+    return Response.json(
+      {
+        ok: false,
+        error: "We could not remove this public QR card. Check your connection and try again."
       },
       { status: 503 }
     );

@@ -121,6 +121,46 @@ export async function upsertPublicCard(card: PublicCard, ownerSyncKey: string) {
   return { mode: "local_server" };
 }
 
+/**
+ * Removes the scanner-facing card before its private event workspace is deleted.
+ * The owner sync key is required so an opaque card URL alone cannot unpublish a card.
+ */
+export async function deletePublicCard(cardId: string, ownerSyncKey: string) {
+  const mode = getPublicStoreMode();
+  if (!ownerSyncKey) throw new Error("Missing owner sync key");
+
+  if (mode === "supabase") {
+    const [existing] = await supabaseFetch<Array<{ owner_sync_key?: string }>>(
+      `cards?select=owner_sync_key&id=eq.${encodeURIComponent(cardId)}&limit=1`
+    );
+    if (!existing) return { mode: "supabase", deleted: false };
+    if (!existing.owner_sync_key || existing.owner_sync_key !== ownerSyncKey) {
+      throw new Error("Public card owner key mismatch");
+    }
+
+    // `contacts.card_id` has an on-delete cascade in the supplied schema.
+    await supabaseFetch(`cards?id=eq.${encodeURIComponent(cardId)}`, { method: "DELETE" });
+    return { mode: "supabase", deleted: true };
+  }
+
+  if (mode === "unconfigured") {
+    throw new Error("Public storage is not configured");
+  }
+
+  const store = await readLocalStore();
+  const existingCard = store.cards.find((card) => card.id === cardId);
+  if (!existingCard) return { mode: "local_server", deleted: false };
+  if (!existingCard.ownerSyncKey || existingCard.ownerSyncKey !== ownerSyncKey) {
+    throw new Error("Public card owner key mismatch");
+  }
+
+  await writeLocalStore({
+    cards: store.cards.filter((card) => card.id !== cardId),
+    contacts: store.contacts.filter((contact) => contact.cardId !== cardId)
+  });
+  return { mode: "local_server", deleted: true };
+}
+
 async function canWritePublicCard(cardId: string, ownerSyncKey: string) {
   const [existing] = await supabaseFetch<Array<{ owner_sync_key?: string }>>(
     `cards?select=owner_sync_key&id=eq.${encodeURIComponent(cardId)}&limit=1`
