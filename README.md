@@ -114,10 +114,8 @@ Add these values to `.env.local`:
 
 ```bash
 OPENAI_API_KEY=your_key_here
-# Optional. Defaults to the lower-cost GPT-5.6 Terra model.
-OPENAI_MODEL=gpt-5.6-terra
-# Optional. Used only when someone enters a short event name/date rather than a URL.
-# Defaults to gpt-5.6 for live web research.
+# Optional. Used by event research, prep, the interactive research chat, and
+# source-linked public context checks. Defaults to gpt-5.6 when omitted.
 OPENAI_RESEARCH_MODEL=gpt-5.6
 # Optional. High-context follow-up synthesis defaults to GPT-5.6 as well.
 OPENAI_FOLLOWUP_MODEL=gpt-5.6
@@ -128,7 +126,7 @@ OPENAI_REASONING_EFFORT=high
 OPENAI_VISION_MODEL=gpt-5.6
 ```
 
-`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. All GPT decision calls default to high reasoning effort. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title is then used for live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. `app/api/contact-research/route.ts` performs a separate, owner-triggered public identity check for a single follow-up; it never searches the contact's email, phone, private notes, or promise. The owner can open every captured source from the research section, chat answer, or confirmed contact context.
+`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output, bounded server-side inputs, high reasoning, and explicit answer-quality prompts. The model privately separates confirmed facts, attendee goal, specific outcome, and next action before it writes an answer. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API `web_search` tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title then triggers live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. `app/api/contact-research/route.ts` performs a separate, owner-triggered public identity check for a single follow-up; it never searches the contact's email, phone, private notes, or promise. The owner can open every captured source from the research section, chat answer, or confirmed contact context.
 
 ## Key Screens
 

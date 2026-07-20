@@ -30,7 +30,7 @@ The Build Week version is intentionally a single end-to-end loop:
 
 ## Where GPT-5.6 is used
 
-The server-side OpenAI Responses API uses `OPENAI_MODEL` (default `gpt-5.6-terra`) for the fast prep loop, and uses the higher-capability `OPENAI_RESEARCH_MODEL` / `OPENAI_FOLLOWUP_MODEL` (both default `gpt-5.6`) when a task needs public research or high-context follow-up synthesis:
+The server-side OpenAI Responses API uses `OPENAI_RESEARCH_MODEL` (default `gpt-5.6`) for event research, prep synthesis, interactive research chat, and public context confirmation. It uses `OPENAI_FOLLOWUP_MODEL` (default `gpt-5.6`) for high-context follow-up synthesis. Every call defaults to high reasoning and has an explicit prompt that separates confirmed facts, the attendee's goal, their specific outcome, and the recommended next move before producing a response:
 
 - event prep briefs and suggested link reasoning in [`app/api/generate/route.ts`](./app/api/generate/route.ts)
 - grounded follow-up research chat in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts)
