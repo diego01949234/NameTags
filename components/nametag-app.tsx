@@ -841,7 +841,9 @@ export function NametagApp() {
       // Public cards are removed first. If this fails, keep the private event so
       // the owner can retry rather than accidentally leave a live QR behind.
       for (const card of cardsToRemove) {
-        if (!card.ownerSyncKey) continue;
+        if (!card.ownerSyncKey) {
+          throw new Error("This event is missing its QR owner key, so it was kept intact. Open it from the device that created it and try again.");
+        }
         const response = await fetch(`/api/public-card/${card.id}`, {
           method: "DELETE",
           headers: { "x-nametag-owner-key": card.ownerSyncKey }
