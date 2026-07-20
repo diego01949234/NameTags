@@ -3341,11 +3341,36 @@ function organizeSeminarNotes(notes: EventNote[]) {
 }
 
 function buildFollowUpDraft(contact: Contact, eventName: string) {
-  const context = (contact.note || "we had a good conversation").replace(/[.!?]+$/, "");
+  const firstName = contact.name.trim().split(/\s+/)[0] || "there";
+  const contextLine = buildFollowUpContextLine(contact.note);
   const nextStep = contact.promise
-    ? ` As promised, I will ${contact.promise.charAt(0).toLowerCase()}${contact.promise.slice(1)}.`
-    : " I would love to keep the conversation going.";
-  return `Hi ${contact.name.split(" ")[0]}, great meeting you at ${eventName}. I remembered: ${context}.${nextStep}`;
+    ? ` I'll ${lowercaseFirst(trimSentence(contact.promise))}.`
+    : " I'd love to stay in touch.";
+  return `Hi ${firstName}, it was great meeting you at ${eventName}.${contextLine}${nextStep}`;
+}
+
+function buildFollowUpContextLine(note: string) {
+  const cleaned = trimSentence(note.trim());
+  if (!cleaned || /shared details through the event card|connected through .*public card/i.test(cleaned)) {
+    return "";
+  }
+
+  const organization = cleaned.match(/\bfrom\s+(.+)$/i)?.[1]?.trim();
+  if (organization) return ` I enjoyed hearing about your work with ${organization}.`;
+
+  return " Thanks for sharing a little about what you're working on.";
+}
+
+function isLegacyFollowUpDraft(draft?: string) {
+  return Boolean(draft && (/\bi remembered:/i.test(draft) || /\bnametags? link we discussed/i.test(draft)));
+}
+
+function lowercaseFirst(value: string) {
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
+
+function trimSentence(value: string) {
+  return value.replace(/[.!?]+$/, "");
 }
 
 function followUpWindowLabel(window?: Contact["followUpWindow"]) {
@@ -3446,7 +3471,7 @@ function DebriefScreen({
   function setFollowUpStatus(contactId: string, status: FollowUp["status"]) {
     setState((current) => {
       const target = current.contacts.find((contact) => contact.id === contactId);
-      const draft = target?.followUpDraft ?? buildFollowUpDraft(target ?? {
+      const fallbackContact: Contact = target ?? {
         id: contactId,
         eventId: card.eventId,
         cardId: card.id,
@@ -3456,16 +3481,22 @@ function DebriefScreen({
         promise: "",
         priority: "medium",
         createdAt: ""
-      }, event?.name ?? "the event");
+      };
       const existingFollowUp = current.followUps.find((followUp) => followUp.contactId === contactId);
+      const savedDraft = target?.followUpDraft ?? existingFollowUp?.message;
+      const draft = isLegacyFollowUpDraft(savedDraft)
+        ? buildFollowUpDraft(fallbackContact, event?.name ?? "the event")
+        : savedDraft ?? buildFollowUpDraft(fallbackContact, event?.name ?? "the event");
       return {
         ...current,
         contacts: current.contacts.map((contact) =>
-          contact.id === contactId ? { ...contact, done: status === "done" } : contact
+          contact.id === contactId
+            ? { ...contact, done: status === "done", followUpDraft: draft }
+            : contact
         ),
         followUps: existingFollowUp
           ? current.followUps.map((followUp) =>
-              followUp.contactId === contactId ? { ...followUp, status } : followUp
+              followUp.contactId === contactId ? { ...followUp, message: draft, status } : followUp
             )
           : [{ id: makeId("followup"), contactId, message: draft, status }, ...current.followUps]
       };
@@ -3598,10 +3629,10 @@ function DebriefScreen({
   }
 
   async function copyFollowUp(contact: Contact) {
-    const draft =
-      contact.followUpDraft ??
-      state.followUps.find((followUp) => followUp.contactId === contact.id)?.message ??
-      buildFollowUpDraft(contact, event?.name ?? "the event");
+    const savedDraft = contact.followUpDraft ?? state.followUps.find((followUp) => followUp.contactId === contact.id)?.message;
+    const draft = isLegacyFollowUpDraft(savedDraft)
+      ? buildFollowUpDraft(contact, event?.name ?? "the event")
+      : savedDraft ?? buildFollowUpDraft(contact, event?.name ?? "the event");
     await navigator.clipboard?.writeText(draft).catch(() => undefined);
     setCopiedFollowUpId(contact.id);
   }
@@ -3860,10 +3891,10 @@ function DebriefScreen({
           />
         ) : (
           contacts.map((contact) => {
-            const draft =
-              contact.followUpDraft ??
-              state.followUps.find((followUp) => followUp.contactId === contact.id)?.message ??
-              buildFollowUpDraft(contact, event?.name ?? "the event");
+            const savedDraft = contact.followUpDraft ?? state.followUps.find((followUp) => followUp.contactId === contact.id)?.message;
+            const draft = isLegacyFollowUpDraft(savedDraft)
+              ? buildFollowUpDraft(contact, event?.name ?? "the event")
+              : savedDraft ?? buildFollowUpDraft(contact, event?.name ?? "the event");
             const status = statusFor(contact);
             return (
               <div key={contact.id} className="rounded-lg border border-line bg-white p-3">

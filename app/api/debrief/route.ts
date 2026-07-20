@@ -92,7 +92,7 @@ async function organizeWithOpenAI(payload: EventDebriefRequest): Promise<EventDe
         {
           role: "system",
           content:
-            "You are NameTag's event debrief copilot. Turn a small, messy post-event contact list and private notes into a calm, actionable follow-up queue. Use only the supplied contacts, promises, notes, event name, goal, focus, and networkingRole. Never invent what someone said, their title, an agreement, a timeline, or a relationship. Match the draft to networkingRole: students can ask a small specific question, builders can refer to feedback or a demo, career movers can reference relevant work, community attendees can carry forward a shared moment, and explorers can keep the note simple and warm. Keep explicit promises and meaningful requests at high priority; use medium for worthwhile but less urgent conversations; use low for light or incomplete connections. Give every supplied contact exactly one recommendation, a short factual reason, a time window, and a warm concise first-person draft that is ready to edit. Drafts must not claim the user will do something unless a supplied promise says so. The summary should describe the queue, not give generic networking advice. Return only JSON matching the schema."
+            "You are NameTag's event debrief copilot. Turn a small, messy post-event contact list and private notes into a calm, actionable follow-up queue. Use only the supplied contacts, promises, notes, event name, goal, focus, and networkingRole. Never invent what someone said, their title, an agreement, a timeline, or a relationship. Match the draft to networkingRole: students can ask a small specific question, builders can refer to feedback or a demo, career movers can reference relevant work, community attendees can carry forward a shared moment, and explorers can keep the note simple and warm. Keep explicit promises and meaningful requests at high priority; use medium for worthwhile but less urgent conversations; use low for light or incomplete connections. Give every supplied contact exactly one recommendation, a short factual reason, a time window, and a warm concise first-person draft that is ready to edit. Drafts should sound like one person writing another person: use one concrete detail only when it reads naturally, never repeat a scanner's self-introduction verbatim, and do not use the phrases 'I remembered:' or 'Here is the NameTag link we discussed.' A contact share with no conversation detail deserves a short warm message, not invented context. Drafts must not claim the user will do something unless a supplied promise says so. The summary should describe the queue, not give generic networking advice. Return only JSON matching the schema."
         },
         {
           role: "user",
@@ -148,7 +148,7 @@ function buildMockDebrief(payload: EventDebriefRequest): EventDebriefResult {
 }
 
 function organizeContact(contact: Contact, eventName: string): EventDebriefResult["contacts"][number] {
-  const note = contact.note?.trim() || "our conversation";
+  const note = contact.note?.trim() || "";
   const promise = contact.promise?.trim();
   const signal = `${note} ${promise ?? ""}`.toLowerCase();
   const hasStrongSignal = /asked|requested|intro|introduction|feedback|demo|prototype|meeting|send|connect/i.test(signal);
@@ -157,8 +157,8 @@ function organizeContact(contact: Contact, eventName: string): EventDebriefResul
     priority === "high" ? "today" : priority === "medium" ? "within_48_hours" : "this_week";
   const firstName = contact.name.trim().split(/\s+/)[0] || "there";
   const promiseLine = promise
-    ? ` As promised, I will ${lowercaseFirst(promise)}.`
-    : " I would love to keep the conversation going.";
+    ? ` I'll ${lowercaseFirst(trimSentence(promise))}.`
+    : " I'd love to stay in touch.";
 
   return {
     contactId: contact.id,
@@ -171,8 +171,20 @@ function organizeContact(contact: Contact, eventName: string): EventDebriefResul
         : contact.contact
           ? "You have a direct way to reconnect, but no urgent promise was recorded."
           : "The connection is worth keeping, but you do not yet have a clear next step.",
-    followUpDraft: `Hi ${firstName}, great meeting you at ${eventName}. I remembered: ${trimSentence(note)}.${promiseLine}`
+    followUpDraft: `Hi ${firstName}, it was great meeting you at ${eventName}.${buildMockContextLine(note)}${promiseLine}`
   };
+}
+
+function buildMockContextLine(note: string) {
+  const cleaned = trimSentence(note.trim());
+  if (!cleaned || /shared details through the event card|connected through .*public card/i.test(cleaned)) {
+    return "";
+  }
+
+  const organization = cleaned.match(/\bfrom\s+(.+)$/i)?.[1]?.trim();
+  if (organization) return ` I enjoyed hearing about your work with ${organization}.`;
+
+  return " Thanks for sharing a little about what you're working on.";
 }
 
 function lowercaseFirst(value: string) {

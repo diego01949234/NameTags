@@ -153,7 +153,7 @@ export function PublicCardPage({ cardId }: { cardId: string }) {
     setIsSubmitting(true);
     setSubmitError("");
 
-    const noteText = note.trim() || "Connected through NameTag public card.";
+    const noteText = note.trim() || "Shared details through the event card.";
     const newContact: Contact = {
       id: makeId("contact"),
       eventId: publicEventId,
@@ -163,9 +163,7 @@ export function PublicCardPage({ cardId }: { cardId: string }) {
       note: noteText,
       promise: "",
       priority: "medium",
-      followUpDraft: `Hi ${name.trim().split(" ")[0]}, great meeting you at ${
-        displayEventName
-      }. I remembered: ${noteText} Here is the NameTag link we discussed, and I would love to keep the conversation going.`,
+      followUpDraft: buildConnectionFollowUp(name, displayEventName, noteText),
       done: false,
       consentedAt: new Date().toISOString(),
       createdAt: new Date().toISOString()
@@ -557,4 +555,22 @@ function titleizeHandle(value: string) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function buildConnectionFollowUp(recipientName: string, eventName: string, note: string) {
+  const firstName = recipientName.trim().split(/\s+/)[0] || "there";
+  const contextLine = followUpContextLine(note);
+  return `Hi ${firstName}, it was great meeting you at ${eventName}.${contextLine} I'd love to stay in touch.`;
+}
+
+function followUpContextLine(note: string) {
+  const cleaned = note.trim().replace(/[.!?]+$/, "");
+  if (!cleaned || /shared details through the event card|connected through .*public card/i.test(cleaned)) {
+    return "";
+  }
+
+  const organization = cleaned.match(/\bfrom\s+(.+)$/i)?.[1]?.trim();
+  if (organization) return ` I enjoyed hearing about your work with ${organization}.`;
+
+  return " Thanks for sharing a little about what you're working on.";
 }
