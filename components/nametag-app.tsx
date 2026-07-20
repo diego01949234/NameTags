@@ -10,6 +10,7 @@ import {
   BookOpenText,
   CalendarDays,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
   Cloud,
   Copy,
@@ -1823,13 +1824,11 @@ function EventsHomeScreen({
         />
       )}
 
-      {savedCards.length > 0 && (
-        <EventHistorySections
-          cards={savedCards}
-          state={state}
-          selectCard={selectCard}
-        />
-      )}
+      <EventHistorySections
+        cards={savedCards}
+        state={state}
+        selectCard={selectCard}
+      />
     </div>
   );
 }
@@ -1847,7 +1846,7 @@ function EventHistorySections({
   const groups = [
     { label: "Last 48 hours", cards: [] as NametagCard[] },
     { label: "Past week", cards: [] as NametagCard[] },
-    { label: "Earlier", cards: [] as NametagCard[] }
+    { label: "Archive", cards: [] as NametagCard[] }
   ];
 
   cards.forEach((card) => {
@@ -1858,39 +1857,46 @@ function EventHistorySections({
 
   return (
     <section className="space-y-2">
-      <div className="px-1 font-badge-mono text-[10px] font-black uppercase text-slate-soft">Past events</div>
-      {groups.map((group) => group.cards.length > 0 && (
-        <details key={group.label} className="rounded-lg border border-line bg-white">
+      <div className="px-1 font-badge-mono text-[10px] font-black uppercase text-slate-soft">Event history</div>
+      {groups.map((group) => (
+        <details key={group.label} className="group rounded-lg border border-line bg-white">
           <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3">
             <span className="text-sm font-black text-ink">{group.label}</span>
-            <MiniBadge tone="slate">{group.cards.length}</MiniBadge>
+            <span className="inline-flex items-center gap-2">
+              <MiniBadge tone="slate">{group.cards.length}</MiniBadge>
+              <ChevronDown className="size-4 text-slate-400 transition group-open:rotate-180" />
+            </span>
           </summary>
-          <div className="space-y-2 border-t border-line p-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
-            {group.cards.map((card) => {
-              const event = state.events.find((item) => item.id === card.eventId);
-              const contacts = state.contacts.filter((contact) => contact.eventId === card.eventId);
-              const pending = contacts.filter(
-                (contact) => (state.followUps.find((followUp) => followUp.contactId === contact.id)?.status ?? "to_send") === "to_send"
-              ).length;
-              return (
-                <button
-                  type="button"
-                  onClick={() => selectCard(card.id, "brief")}
-                  key={card.id}
-                  className="flex w-full items-center gap-3 rounded-lg border border-line bg-wash p-3 text-left transition hover:border-ink hover:bg-white"
-                >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-ink text-mint">
-                    <CalendarDays className="size-4" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm font-black text-ink">{event?.name ?? "Untitled event"}</span>
-                    <span className="mt-1 block text-xs font-bold text-slate-soft">{pending ? `${pending} follow-ups waiting` : `${contacts.length} connections`}</span>
-                  </span>
-                  <ArrowRight className="size-4 shrink-0 text-slate-400" />
-                </button>
-              );
-            })}
-          </div>
+          {group.cards.length ? (
+            <div className="space-y-2 border-t border-line p-2.5 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+              {group.cards.map((card) => {
+                const event = state.events.find((item) => item.id === card.eventId);
+                const contacts = state.contacts.filter((contact) => contact.eventId === card.eventId);
+                const pending = contacts.filter(
+                  (contact) => (state.followUps.find((followUp) => followUp.contactId === contact.id)?.status ?? "to_send") === "to_send"
+                ).length;
+                return (
+                  <button
+                    type="button"
+                    onClick={() => selectCard(card.id, "brief")}
+                    key={card.id}
+                    className="flex w-full items-center gap-3 rounded-lg border border-line bg-wash p-3 text-left transition hover:border-ink hover:bg-white"
+                  >
+                    <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-ink text-mint">
+                      <CalendarDays className="size-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-black text-ink">{event?.name ?? "Untitled event"}</span>
+                      <span className="mt-1 block text-xs font-bold text-slate-soft">{pending ? `${pending} follow-ups waiting` : `${contacts.length} connections`}</span>
+                    </span>
+                    <ArrowRight className="size-4 shrink-0 text-slate-400" />
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="border-t border-line px-3 py-3 text-xs font-semibold text-slate-soft">No events here yet.</p>
+          )}
         </details>
       ))}
     </section>
