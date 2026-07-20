@@ -23,7 +23,7 @@ Use **Explore a sample event** when you want the same guided walkthrough without
 
 ## Product Flow
 
-1. **Before - Understand:** Sign in once, paste an event URL, type a short event name/date for live web research, write a description, or add a screenshot. NameTag turns that material into a grounded event brief and preserves the same context for follow-up research questions. A clearly labelled fictional sample event lets a reviewer try this without an account.
+1. **Before - Understand:** Sign in once, paste an event URL, type a short event name/date for live web research, write a description, or add a screenshot. NameTag turns that material into a grounded event brief; factual follow-up questions can refresh public web research, while private profile context is used only to tailor advice. A clearly labelled fictional sample event lets a reviewer try this without an account.
 2. **During - Show QR:** Choose the few public links that make sense for this room, then show one event-specific QR code. The scanner sees only those selected links, can save the card, and can explicitly opt in to share their own contact and conversation note.
 3. **After - Follow up:** Review people, private notes, follow-up drafts, and the next real action. Add people from paper cards or introductions, record promises, and deliberately move each follow-up from to send to sent to done.
 
@@ -119,7 +119,7 @@ OPENAI_MODEL=gpt-5.6-terra
 OPENAI_RESEARCH_MODEL=gpt-5.6
 ```
 
-`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. The owner can open every captured source from the research section of the brief.
+`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. The owner can open every captured source from the research section or the corresponding chat answer.
 
 ## Key Screens
 

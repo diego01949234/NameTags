@@ -496,7 +496,7 @@ export function NametagApp() {
             .filter(Boolean)
             .join("\n\n");
           const sourceContext = (brief.sources ?? [])
-            .map((source) => `Source: ${source.title} (${source.url})`)
+            .map((source: ResearchSource) => `Source: ${source.title} (${source.url})`)
             .join("\n");
           researchContext = [brief.text, sourceContext, screenshotContext].filter(Boolean).join("\n\n");
           researchSourceUrl = brief.sourceUrl;
@@ -2869,7 +2869,7 @@ function DesktopResearchPanel({
 
         <div className="space-y-4 p-5">
           <p className="app-info-copy text-slate-700">
-            Answers use the event material you provided. When the source is thin, NameTag says so instead of guessing.
+            Answers use saved event material. Factual questions can also check live public sources; your private background stays in the tailoring step.
           </p>
           <div className="border-t border-line pt-4">
             <div className="app-kicker text-slate-soft">Tailored to you</div>
@@ -2910,9 +2910,8 @@ function ResearchChat({
   const [question, setQuestion] = useState("");
   const [isThinking, setIsThinking] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState(() => buildResearchPrompts(brief, role));
-  const [answerMode, setAnswerMode] = useState<"GPT-5.6" | "Prepared fallback" | null>(null);
+  const [answerMode, setAnswerMode] = useState<"GPT-5.6" | "GPT-5.6 + web" | "Prepared fallback" | null>(null);
   const messages = card.researchMessages ?? [];
-  const sourceLabel = getResearchSourceLabel(event);
   const starterOptions = buildResearchStarters(brief, role);
 
   async function askResearchQuestion(value: string) {
@@ -2962,13 +2961,20 @@ function ResearchChat({
         id: makeId("research"),
         role: "assistant",
         content: data.result.answer,
+        sources: data.result.sources,
         createdAt: new Date().toISOString()
       };
       updateCard({ researchMessages: [...nextMessages, assistantMessage].slice(-8) });
       if (data.result.suggestedQuestions.length) {
         setSuggestedQuestions(data.result.suggestedQuestions.slice(0, 3));
       }
-      setAnswerMode(data.mode === "openai" ? "GPT-5.6" : "Prepared fallback");
+      setAnswerMode(
+        data.mode === "openai_web"
+          ? "GPT-5.6 + web"
+          : data.mode === "openai"
+            ? "GPT-5.6"
+            : "Prepared fallback"
+      );
     } catch {
       const fallbackMessage: ResearchMessage = {
         id: makeId("research"),
@@ -3003,7 +3009,7 @@ function ResearchChat({
             {answerMode && <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-black text-white/75">{answerMode}</span>}
           </div>
           <p className="mt-1 text-xs font-semibold leading-5 text-white/70">
-            Grounded in {sourceLabel.toLowerCase()} and your private profile. Ask until the room makes sense, then get words you can actually use.
+            Ask a factual question to check current public sources. Personal rehearsal stays inside Nametags and uses your private profile only to tailor the advice.
           </p>
         </div>
       </div>
@@ -3043,7 +3049,23 @@ function ResearchChat({
                     : "mr-3 whitespace-pre-wrap rounded-lg border border-cobalt/20 bg-cobalt/5 px-3 py-2 text-sm font-semibold leading-5 text-slate-700"
                 }
               >
-                {message.content}
+                <div>{message.content}</div>
+                {message.role === "assistant" && message.sources?.length ? (
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-cobalt/15 pt-2">
+                    {message.sources.map((source) => (
+                      <a
+                        key={source.url}
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex max-w-full items-center gap-1 rounded-md border border-cobalt/20 bg-white px-2 py-1 text-[10px] font-black text-cobalt transition hover:border-cobalt hover:bg-cobalt/5"
+                      >
+                        <span className="truncate">{source.title}</span>
+                        <ArrowUpRight className="size-3 shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -3054,7 +3076,7 @@ function ResearchChat({
             className={`${inputClass} min-h-11 flex-1 resize-none py-2.5`}
             value={question}
             onChange={(eventChange) => setQuestion(eventChange.target.value)}
-            placeholder="Ask about the event or how to introduce yourself..."
+            placeholder="Ask what this event is, who is involved, or how to introduce yourself..."
             aria-label="Ask NameTag about this event"
             rows={1}
             maxLength={600}

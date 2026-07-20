@@ -22,6 +22,7 @@ The Build Week version is intentionally a single end-to-end loop:
 - Owner workspaces automatically save to Supabase after each edit and are protected by owner-only Row Level Security.
 - A one-tap, no-login fictional sample event so a reviewer can experience the complete product loop before creating an account.
 - Grounded event research from a URL, description, or screenshot. Short natural-language event searches use GPT-5.6 web search with visible source links, and thin SPA event pages automatically fall back to that lookup instead of making the attendee re-enter the event.
+- Factual research-chat questions can refresh public web research, then a separate private tailoring step turns those facts into a role- and goal-specific networking move. The web lookup never receives profile, CV, LinkedIn, or private background content.
 - The same event ID connects research, owner link choices, the public room pass, scanner consent, and the follow-up queue. The server derives a scanner connection's event ID from the published room pass rather than trusting a browser-supplied value.
 - QR contact capture now requires explicit consent on the client **and** server, with a server-recorded consent timestamp.
 - The follow-up view prioritizes the next real action, shows recommended timing, lets the owner edit/copy a draft, mark it sent, and mark it done.
@@ -34,7 +35,7 @@ The server-side OpenAI Responses API calls use `OPENAI_MODEL` (default `gpt-5.6-
 - grounded follow-up research chat in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts)
 - prioritization and editable follow-up drafts in [`app/api/debrief/route.ts`](./app/api/debrief/route.ts)
 
-Short event-name/date searches use `OPENAI_RESEARCH_MODEL` (default `gpt-5.6`) with the Responses API `web_search` tool in [`app/api/brief/route.ts`](./app/api/brief/route.ts). The response stores up to three visible source links with the event context.
+Short event-name/date searches use `OPENAI_RESEARCH_MODEL` (default `gpt-5.6`) with the Responses API `web_search` tool in [`app/api/brief/route.ts`](./app/api/brief/route.ts). Factual chat questions use the same public-only lookup in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts), then a separate model call uses the private profile only to tailor advice. Each web-backed answer stores up to three visible source links.
 
 Every AI route has a deterministic fallback so the core flow remains available if the model or event-page fetch is unavailable. Event research does not invent named speakers or attendees when the source does not support them.
 

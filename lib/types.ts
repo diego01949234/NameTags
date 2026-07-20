@@ -120,6 +120,8 @@ export type ResearchMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
+  /** Public web sources used only for this answer, never profile information. */
+  sources?: ResearchSource[];
   createdAt: string;
 };
 
@@ -137,6 +139,7 @@ export type ResearchChatRequest = {
 export type ResearchChatResult = {
   answer: string;
   suggestedQuestions: string[];
+  sources?: ResearchSource[];
 };
 
 export type Contact = {

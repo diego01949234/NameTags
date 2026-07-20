@@ -180,6 +180,7 @@ async function searchEventWithOpenAI(query: string): Promise<WebResearchResult> 
     body: JSON.stringify({
       // Live web search is intentionally stronger than the quick card-generation model.
       model: process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6",
+      reasoning: { effort: "low" },
       tools: [{ type: "web_search" }],
       tool_choice: "required",
       include: ["web_search_call.action.sources"],
