@@ -2078,14 +2078,14 @@ function buildResearchStarters(brief: PrepBrief, role: NetworkingRole): Research
       prompt: roomPrompt
     },
     {
-      title: "Focus my time",
-      description: `What matters here for a ${roleLabel}?`,
-      prompt: `What should I focus on here as a ${roleLabel}?`
+      title: "What should I notice?",
+      description: "Find the people, ideas, and gaps worth paying attention to.",
+      prompt: `What should I pay attention to at this event as a ${roleLabel}? Include only source-confirmed people or details.`
     },
     {
-      title: "Find a good question",
-      description: "Get three questions I can naturally ask.",
-      prompt: `Give me three questions that are specific to ${sourceTopic}.`
+      title: "Help me introduce myself",
+      description: "Get two natural ways to say hello, then a question to ask.",
+      prompt: `Help me introduce myself naturally at this event as a ${roleLabel}. Give me one direct version and one curiosity-led version, both specific to ${sourceTopic}.`
     }
   ];
 }
@@ -2681,6 +2681,8 @@ function BriefScreen({
   const sourceLabel = getResearchSourceLabel(event);
   const personalization = describeResearchPersonalization(profile, role);
   const keyTopics = brief.keyTopics.slice(0, 3);
+  const speakerHighlights = brief.speakerHighlights.slice(0, 3);
+  const visibleSignals = roomSignals.slice(0, 3);
   const nervousQuestions = brief.questionsToAsk.slice(0, 3);
 
   return (
@@ -2706,7 +2708,7 @@ function BriefScreen({
 
       <section className="rounded-xl border border-line bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
-          <div className="app-kicker text-cobalt">The short read</div>
+          <div className="app-kicker text-cobalt">The event read</div>
           {event?.researchSourceUrl && (
             <a
               href={event.researchSourceUrl}
@@ -2719,19 +2721,46 @@ function BriefScreen({
             </a>
           )}
         </div>
-        <p className="mt-2 app-info-copy line-clamp-3 text-slate-700">{brief.eventSummary}</p>
-        {keyTopics.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {keyTopics.map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
+        <p className="mt-2 app-info-copy text-slate-700">{brief.eventSummary}</p>
+
+        <div className="mt-4 space-y-3 border-t border-line pt-3">
+          {keyTopics.length > 0 && (
+            <div>
+              <div className="app-kicker text-slate-soft">Topics in the source</div>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {keyTopics.map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
+              </div>
+            </div>
+          )}
+
+          {visibleSignals.length > 0 && (
+            <div>
+              <div className="app-kicker text-slate-soft">What to notice</div>
+              <ul className="mt-2 space-y-1.5">
+                {visibleSignals.map((signal) => <CheckLine key={signal}>{signal}</CheckLine>)}
+              </ul>
+            </div>
+          )}
+
+          <div>
+            <div className="app-kicker text-slate-soft">People named in the source</div>
+            {speakerHighlights.length ? (
+              <ul className="mt-2 space-y-1.5">
+                {speakerHighlights.map((person) => <CheckLine key={person}>{person}</CheckLine>)}
+              </ul>
+            ) : (
+              <p className="mt-2 text-xs font-semibold leading-5 text-slate-600">
+                No source-confirmed speaker or organizer list yet. Ask the chat who to listen for or what to ask an organizer.
+              </p>
+            )}
           </div>
-        )}
+        </div>
+
         <details className="mt-3 border-t border-line pt-3">
-          <summary className="cursor-pointer text-xs font-black text-slate-600">What this answer is based on</summary>
+          <summary className="cursor-pointer text-xs font-black text-slate-600">How this is tailored to you</summary>
           <div className="mt-2 space-y-2 text-xs font-semibold leading-5 text-slate-600">
             <p>{personalization}</p>
-            <ul className="space-y-1.5">
-              {roomSignals.length ? roomSignals.slice(0, 2).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The event details are light, so NameTag keeps the answer broad instead of making facts up.</CheckLine>}
-            </ul>
+            <p>Ask the chat for a personal introduction, questions, or a clearer explanation of any source detail.</p>
           </div>
         </details>
       </section>
@@ -2931,7 +2960,7 @@ function ResearchChat({
             {answerMode && <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-black text-white/75">{answerMode}</span>}
           </div>
           <p className="mt-1 text-xs font-semibold leading-5 text-white/70">
-            Grounded in {sourceLabel.toLowerCase()}. Continue asking until it feels clear.
+            Grounded in {sourceLabel.toLowerCase()} and your private profile. Ask until the room makes sense, then get words you can actually use.
           </p>
         </div>
       </div>
@@ -2939,9 +2968,9 @@ function ResearchChat({
       <div className="space-y-4 p-4">
         {messages.length === 0 && (
           <div>
-            <p className="text-sm font-black text-ink">Start with one direction</p>
+            <p className="text-sm font-black text-ink">What do you need to know?</p>
             <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
-              Pick what you need most right now, then keep asking in your own words.
+              Start with the event, then ask for an introduction or follow-up questions in your own words.
             </p>
             <div className="mt-3 grid gap-2 sm:grid-cols-3">
               {starterOptions.map((starter) => (
@@ -2982,7 +3011,7 @@ function ResearchChat({
             className={`${inputClass} min-h-11 flex-1 resize-none py-2.5`}
             value={question}
             onChange={(eventChange) => setQuestion(eventChange.target.value)}
-            placeholder="Ask a follow-up about this event..."
+            placeholder="Ask about the event or how to introduce yourself..."
             aria-label="Ask NameTag about this event"
             rows={1}
             maxLength={600}

@@ -67,10 +67,11 @@ async function answerWithOpenAI(
   const history = payload.history.slice(-6);
   const systemPrompt = [
     "You are NameTag's event research copilot. Answer one attendee follow-up question using only the supplied event source, generated brief, stated goal, and private profile context.",
-    "Start with a direct answer to what the attendee asked. Then, where helpful, use short labeled sections such as 'What the source confirms:' and 'Next move:'. Use short bullets when giving questions or options.",
+    "Start with a direct answer to what the attendee asked. Then, where helpful, use short labeled sections such as 'What the source confirms:' and 'Next move:'. Use short bullets when giving questions or options. Keep it useful on a phone: no long essays.",
     "Be specific and tailored: the private networkingRole and privateContext should change which decision, question, or next action you recommend. Do not repeat private details unless the attendee explicitly asks about their own preparation.",
     "Do not invent speakers, attendees, companies, agenda details, or web research. Only call someone a speaker or organizer when the source explicitly says so. When the source does not contain a requested fact, lead with 'Missing:' and say that plainly, then give a useful question the attendee can ask in person.",
-    "Do not use generic networking coaching or manufacture a pitch unless the attendee asks for one. Never imply you browsed beyond the supplied source. Return only JSON matching the schema."
+    "When asked how to introduce themselves, provide exactly two short spoken options labeled 'Direct' and 'Curiosity-led'. Each must be under 40 words, draw privately on the attendee's profile and stated goal, and end with one event-specific question they can ask next. This is private preparation, never public QR copy.",
+    "Suggested questions must be concrete next turns based on this event and attendee, not generic prompts like 'tell me more'. Never imply you browsed beyond the supplied source. Return only JSON matching the schema."
   ].join(" ");
 
   const response = await fetch("https://api.openai.com/v1/responses", {
@@ -153,6 +154,13 @@ function mockResearchAnswer(payload: ResearchChatRequest, question: string): Res
     community: "Start with their process and context before asking for a connection.",
     exploring: "Use the answer to choose one clear person or question to prioritize."
   };
+  const profileIdentity =
+    payload.profile.headline.trim() ||
+    payload.profile.organization.trim() ||
+    payload.profile.school.trim() ||
+    "someone who is exploring this space";
+  const name = payload.profile.name.trim();
+  const goal = payload.brief.recommendedGoal.trim() || "learn what matters in this room";
   let answer = "";
 
   if (lowerQuestion.includes("ask") || lowerQuestion.includes("question")) {
@@ -165,7 +173,15 @@ function mockResearchAnswer(payload: ResearchChatRequest, question: string): Res
         "\n\nNext move: pick one person whose stated topic overlaps with your goal, then ask about the work they are already named for."
       : "Missing: I do not have a source-confirmed speaker or organizer list for this event.\n\nAsk an organizer: “Who should I make sure I hear from today, and what are they working on?” That gets you useful context without pretending the page gave us names.";
   } else if (lowerQuestion.includes("intro") || lowerQuestion.includes("introduce") || lowerQuestion.includes("pitch")) {
-    answer = "A short optional introduction for this room is:\n\n“" + payload.brief.intro + "”\n\nThen ask what they are working on. Keep the longer story for when they ask a follow-up.";
+    const greeting = name ? `Hi, I'm ${name}.` : "Hi.";
+    answer =
+      "Direct:\n“" +
+      greeting +
+      ` I'm ${profileIdentity}, and I'm here to ${goal.toLowerCase()}. What brought you to this event?”\n\n` +
+      "Curiosity-led:\n“" +
+      greeting +
+      ` I've been thinking about ${topic}. What are you hoping to understand or meet people around today?”\n\n` +
+      "Next move: say one version, then let their answer decide the conversation. You do not need to deliver a pitch.";
   } else if (lowerQuestion.includes("priority") || lowerQuestion.includes("first") || lowerQuestion.includes("meet")) {
     answer =
       "Prioritize " +
@@ -176,7 +192,9 @@ function mockResearchAnswer(payload: ResearchChatRequest, question: string): Res
     lowerQuestion.includes("about") ||
     lowerQuestion.includes("understand") ||
     lowerQuestion.includes("what is") ||
-    lowerQuestion.includes("what's")
+    lowerQuestion.includes("what's") ||
+    lowerQuestion.includes("notice") ||
+    lowerQuestion.includes("attention")
   ) {
     answer = `What the source confirms:\n${payload.brief.eventSummary}\n\nKey signals:\n${
       (payload.brief.roomSignals ?? []).slice(0, 3).map((signal) => `- ${signal}`).join("\n") || "- Missing: the source has limited detail."
@@ -190,10 +208,17 @@ function mockResearchAnswer(payload: ResearchChatRequest, question: string): Res
 
   return {
     answer,
-    suggestedQuestions: [
-      "What is this event actually about?",
-      `What should I ask about ${topic}?`,
-      "Who should I prioritize first?"
-    ]
+    suggestedQuestions:
+      lowerQuestion.includes("intro") || lowerQuestion.includes("introduce") || lowerQuestion.includes("pitch")
+        ? [
+            "Make that more casual.",
+            `What can I ask after mentioning ${topic}?`,
+            "What should I listen for in their answer?"
+          ]
+        : [
+            "Help me introduce myself naturally.",
+            `What should I ask about ${topic}?`,
+            "Who should I prioritize first?"
+          ]
   };
 }
