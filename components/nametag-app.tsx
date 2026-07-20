@@ -1894,7 +1894,7 @@ function EventContextStrip({
       <span className="font-black text-ink">{event?.name ?? "Current event"}</span>
       <span className="text-slate-400">{sourceLabel}</span>
       <span className="basis-full text-slate-soft sm:basis-auto">
-        {stage === "links" ? "Guides your choices here; it never appears after the QR." : "Keeps these connections, notes, and follow-ups in one room."}
+        {stage === "links" ? "Guides your choices here; it never appears after the QR." : "Keeps each person, promise, and first message together for this event."}
       </span>
     </div>
   );
@@ -2511,14 +2511,8 @@ function BriefScreen({
 }) {
   const brief = card.prepBrief;
   const roomSignals = brief.roomSignals ?? [];
-  const peopleToMeet = brief.peopleToMeet ?? [];
-  const peopleMentioned = Array.from(new Set([...brief.speakerHighlights, ...brief.suggestedPeople]));
-  const hasPeopleSignal =
-    peopleMentioned.length > 0 &&
-    hasSpecificPeopleSignal(event?.researchContext ?? event?.urlOrDescription ?? "", peopleMentioned);
   const sourceLabel = getResearchSourceLabel(event);
   const personalization = describeResearchPersonalization(profile, role);
-  const readyQuestions = brief.questionsToAsk.slice(0, 3);
 
   return (
     <div className="space-y-4 lg:space-y-5">
@@ -2557,57 +2551,34 @@ function BriefScreen({
           <div className="mt-1 text-sm font-black text-ink">What the event material tells us</div>
         </div>
         <div className="space-y-3 p-4">
-          <p className="app-info-copy text-slate-700">{brief.eventSummary}</p>
+          <p className="app-info-copy line-clamp-3 text-slate-700">{brief.eventSummary}</p>
           <div className="flex items-start gap-2 rounded-lg border border-mint/20 bg-mint/10 px-3 py-2.5 text-xs font-semibold leading-5 text-teal-800">
             <BadgeCheck className="mt-0.5 size-4 shrink-0" />
             <span>{personalization}</span>
           </div>
           <details className="rounded-lg border border-line bg-white px-3 py-2.5">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ink">
-              What NameTag found
-              <span className="text-xs font-semibold text-slate-soft">Source details</span>
+              Show source details
+              <span className="text-xs font-semibold text-slate-soft">Brief summary</span>
             </summary>
-            <div className="mt-3 space-y-4 border-t border-line pt-3">
+            <div className="mt-3 space-y-3 border-t border-line pt-3">
               <div>
-                <div className="app-kicker text-slate-soft">Signals</div>
+                <div className="app-kicker text-slate-soft">What is confirmed</div>
                 <ul className="mt-2 space-y-2">
-                  {roomSignals.length ? roomSignals.map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The supplied event details are light, so NameTag keeps this research broad instead of inventing context.</CheckLine>}
+                  {roomSignals.length ? roomSignals.slice(0, 2).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The supplied event details are light, so NameTag keeps this research broad instead of inventing context.</CheckLine>}
                 </ul>
               </div>
               {brief.keyTopics.length > 0 && (
                 <div>
                   <div className="app-kicker text-slate-soft">Topics in the source</div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {brief.keyTopics.map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
+                    {brief.keyTopics.slice(0, 4).map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
                   </div>
-                </div>
-              )}
-              <div>
-                <div className="app-kicker text-slate-soft">{hasPeopleSignal ? "People named in the source" : "Who to look for"}</div>
-                {hasPeopleSignal ? (
-                  <ul className="mt-2 space-y-2">{peopleMentioned.map((person) => <CheckLine key={person}>{person}</CheckLine>)}</ul>
-                ) : (
-                  <ul className="mt-2 space-y-2">
-                    {peopleToMeet.length ? peopleToMeet.map((person) => <CheckLine key={person}>{person}</CheckLine>) : <CheckLine>No named speaker list was provided. Ask an organizer which conversations are most useful to join.</CheckLine>}
-                  </ul>
-                )}
-              </div>
-              {readyQuestions.length > 0 && (
-                <div>
-                  <div className="app-kicker text-slate-soft">Questions you can use</div>
-                  <ol className="mt-2 space-y-2 pl-4 text-sm font-semibold leading-5 text-slate-700 marker:font-black marker:text-cobalt">
-                    {readyQuestions.map((question) => <li key={question}>{question}</li>)}
-                  </ol>
-                </div>
-              )}
-              {brief.recommendedApproach && (
-                <div>
-                  <div className="app-kicker text-slate-soft">A good next move</div>
-                  <p className="mt-1.5 text-sm font-semibold leading-5 text-slate-700">{brief.recommendedApproach}</p>
                 </div>
               )}
             </div>
           </details>
+          <p className="app-meta text-slate-soft">Need speakers, questions, or a next move? Ask below.</p>
         </div>
       </section>
 
@@ -3425,9 +3396,30 @@ function DebriefScreen({
         <MiniBadge tone="mint">After the room</MiniBadge>
         <h2 className="app-screen-title mt-3 text-ink">Your follow-up queue.</h2>
         <p className="app-info-copy mt-2 text-slate-600">
-          Copy one draft, send it where you normally message, then mark it done. The rest is here when you need it.
+          Review the context, edit or copy the draft, send it where you normally message, then mark it sent or done. NameTag never sends a message for you.
         </p>
       </div>
+
+      <section aria-labelledby="follow-up-how-it-works" className="border-y border-line py-3">
+        <div id="follow-up-how-it-works" className="app-kicker text-cobalt">Follow-up in three moves</div>
+        <ol className="mt-2 grid grid-cols-3 gap-2">
+          <li className="min-w-0">
+            <span className="font-badge-mono text-[10px] font-black text-coral">01</span>
+            <div className="mt-1 text-xs font-black text-ink">Capture</div>
+            <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">Name, context, promise.</p>
+          </li>
+          <li className="min-w-0 border-l border-line pl-2">
+            <span className="font-badge-mono text-[10px] font-black text-cobalt">02</span>
+            <div className="mt-1 text-xs font-black text-ink">Send</div>
+            <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">Edit or copy the draft.</p>
+          </li>
+          <li className="min-w-0 border-l border-line pl-2">
+            <span className="font-badge-mono text-[10px] font-black text-teal-800">03</span>
+            <div className="mt-1 text-xs font-black text-ink">Close</div>
+            <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">Mark sent, then done.</p>
+          </li>
+        </ol>
+      </section>
 
       {nextFollowUp ? (
         <section className="overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm">
@@ -3453,7 +3445,7 @@ function DebriefScreen({
               onClick={() => void copyFollowUp(nextFollowUp)}
               className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-coral px-3 text-sm font-black text-white"
             >
-              Copy follow-up draft
+              Copy draft to send
               <Copy className="size-4" />
             </button>
             <button
@@ -3494,7 +3486,7 @@ function DebriefScreen({
             </>
           ) : (
             <p className="app-info-copy text-slate-700">
-              NameTag can read the people, promises, and private notes from this event, then sort what matters today and draft each first message for you.
+              Once you have people or notes, NameTag sorts the queue, explains why each person matters, and drafts a first message you can edit before sending.
             </p>
           )}
           <button
