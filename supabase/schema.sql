@@ -59,6 +59,7 @@ alter table public.user_workspaces enable row level security;
 
 grant usage on schema public to authenticated;
 grant select, insert, update on table public.user_workspaces to authenticated;
+grant select, insert, update on table public.user_workspaces to service_role;
 
 drop policy if exists "Owners can read their workspace" on public.user_workspaces;
 create policy "Owners can read their workspace"
