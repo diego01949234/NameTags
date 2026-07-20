@@ -962,7 +962,14 @@ export function NametagApp() {
                 />
               )}
               {view === "share" && activeCard && (
-                <ShareScreen publicUrl={publicUrl} onBack={() => setView("card")} />
+                <ShareScreen
+                  publicUrl={publicUrl}
+                  linkLabels={activeCard.selectedLinkIds.flatMap((linkId) => {
+                    const link = state.links.find((item) => item.id === linkId);
+                    return link ? [link.label] : [];
+                  })}
+                  onEditLinks={() => setView("card")}
+                />
               )}
               {view === "debrief" && activeCard && (
                 <DebriefScreen
@@ -3283,21 +3290,42 @@ function followUpWindowLabel(window?: Contact["followUpWindow"]) {
   return "Suggested timing: choose a time";
 }
 
-function ShareScreen({ publicUrl, onBack }: { publicUrl: string; onBack: () => void }) {
+function ShareScreen({
+  publicUrl,
+  linkLabels,
+  onEditLinks
+}: {
+  publicUrl: string;
+  linkLabels: string[];
+  onEditLinks: () => void;
+}) {
   return (
     <div className="flex min-h-[calc(100dvh-180px)] flex-col items-center justify-center gap-4 lg:min-h-[calc(100dvh-136px)]">
       <div className="flex w-full max-w-[min(90vw,460px)] items-center justify-between">
         <button
           type="button"
-          onClick={onBack}
+          onClick={onEditLinks}
           className="inline-flex min-h-9 items-center gap-1.5 rounded-md px-2 text-xs font-black text-slate-600 transition hover:bg-wash hover:text-ink"
         >
           <ArrowLeft className="size-3.5" />
-          Back to card
+          Edit QR links
         </button>
         <span className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-slate-soft">Your QR</span>
       </div>
       <QRShare publicUrl={publicUrl} />
+      <button
+        type="button"
+        onClick={onEditLinks}
+        className="flex w-full max-w-[min(90vw,460px)] items-center justify-between gap-3 rounded-lg border border-line bg-white px-3 py-2.5 text-left shadow-sm transition hover:border-cobalt hover:bg-cobalt/5"
+      >
+        <span className="min-w-0">
+          <span className="block text-[10px] font-black uppercase tracking-normal text-slate-soft">This QR shares</span>
+          <span className="mt-0.5 block truncate text-sm font-black text-ink">
+            {linkLabels.length ? linkLabels.join(" • ") : "No public links selected"}
+          </span>
+        </span>
+        <span className="shrink-0 text-xs font-black text-cobalt">Edit</span>
+      </button>
     </div>
   );
 }
