@@ -197,7 +197,7 @@ export function PublicCardPage({ cardId }: { cardId: string }) {
     return (
       <main className="grid min-h-screen place-items-center bg-ink px-4 text-white grid-paper">
         <section className="w-full max-w-sm rounded-lg border border-white/15 bg-white/[0.08] p-5 text-center">
-          <div className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-coral">NameTag</div>
+          <div className="font-badge-mono text-[10px] font-black tracking-normal text-coral">nametags</div>
           <h1 className="mt-3 text-2xl font-black">This room pass is not available.</h1>
           <p className="mt-2 text-sm leading-6 text-white/70">
             The owner may have removed it, or this link is incomplete.
@@ -253,7 +253,7 @@ export function PublicCardPage({ cardId }: { cardId: string }) {
               <span className="absolute inset-y-1 right-1 w-0.5 rounded-full bg-white" />
               <span className="relative">N</span>
             </div>
-            <span className="text-sm font-black">NameTag card</span>
+            <span className="text-sm font-black">nametags card</span>
           </div>
           <span className="font-badge-mono text-[10px] font-black uppercase text-white/45">public</span>
         </div>
@@ -484,7 +484,7 @@ export function PublicCardPage({ cardId }: { cardId: string }) {
           <div className="flex min-h-[440px] flex-col p-12">
             <div className="flex items-start justify-between gap-8">
               <div>
-                <div className="text-[16px] font-black uppercase tracking-[0.16em] text-[#ff5b4d]">NameTag</div>
+                <div className="text-[16px] font-black tracking-normal text-[#ff5b4d]">nametags</div>
                 <div className="mt-7 text-[54px] font-black leading-none">{displayName}</div>
                 {displayHeadline && <div className="mt-3 text-[22px] font-bold text-[#2865d9]">{displayHeadline}</div>}
               </div>

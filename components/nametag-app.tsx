@@ -1298,7 +1298,7 @@ function DesktopSidebar({
           <span className="text-base font-black">N</span>
         </span>
         <span>
-          <span className="block text-[15px] font-bold tracking-normal text-ink">NameTag</span>
+          <span className="block text-[15px] font-bold tracking-normal text-ink">nametags</span>
           <span className="block whitespace-nowrap text-[10px] font-medium text-slate-soft">Make networking easier.</span>
         </span>
       </button>
@@ -1407,7 +1407,7 @@ function PhoneTop({
         <div className="text-center">
           <div className="flex items-center justify-center gap-1.5 text-sm font-black">
             <span className="grid size-4 place-items-center rounded-[4px] bg-coral text-[10px] text-white">N</span>
-            NameTag
+            nametags
           </div>
           <div className="max-w-[210px] truncate font-badge-mono text-[9px] font-black uppercase text-slate-soft">
             {activeEventName}
@@ -1451,7 +1451,7 @@ function AppMenu({
       <section className="ml-auto flex h-full w-full max-w-[328px] flex-col rounded-lg border border-ink bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-line px-4 py-4">
           <div>
-            <div className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-slate-soft">NameTag</div>
+            <div className="font-badge-mono text-[10px] font-black tracking-normal text-slate-soft">nametags</div>
             <div className="mt-1 text-lg font-black text-ink">Account</div>
           </div>
           <button
@@ -1608,7 +1608,7 @@ function FirstRunScreen({
       <section className="flex overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm lg:min-h-[560px] lg:flex-col lg:rounded-xl">
         <div className="h-2 bg-coral" />
         <div className="flex flex-1 flex-col p-4 lg:p-8">
-          <div className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-coral">NameTag</div>
+          <div className="font-badge-mono text-[10px] font-black tracking-normal text-coral">nametags</div>
           <h1 className="mt-3 text-3xl font-black leading-8 tracking-tight lg:max-w-[480px] lg:text-[40px] lg:leading-[46px]">
             Networking, without the pressure.
           </h1>

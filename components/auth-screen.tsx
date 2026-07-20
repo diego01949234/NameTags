@@ -289,7 +289,7 @@ export function AuthScreen({
                   <button type="button" onClick={() => void sendMagicLink()} disabled={isWorking || !email.trim()} className="text-slate-600 hover:text-ink disabled:opacity-45">Use a sign-in link</button>
                 </div>
                 <button type="button" onClick={() => changeMode("sign-up")} className="w-full text-center text-xs font-bold text-slate-600 hover:text-ink">
-                  New to NameTag? <span className="text-cobalt">Create an account</span>
+                  New to nametags? <span className="text-cobalt">Create an account</span>
                 </button>
               </form>
             )}

@@ -12,8 +12,8 @@ export function BrandMark({ inverse = false }: { inverse?: boolean }) {
         <span className="relative">N</span>
       </div>
       <div>
-        <div className={`text-2xl font-black tracking-tight ${inverse ? "text-white" : "text-ink"}`}>
-          NameTag
+        <div className={`text-2xl font-black tracking-normal ${inverse ? "text-white" : "text-ink"}`}>
+          nametags
         </div>
         <div className={`text-xs font-bold ${inverse ? "text-white/70" : "text-slate-soft"}`}>
           Networking, without the pressure.

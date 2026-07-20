@@ -11,13 +11,13 @@ export function QRShare({
   ownerName: string;
   eventName?: string;
 }) {
-  const displayName = ownerName.trim() || "Your NameTag";
+  const displayName = ownerName.trim() || "Your nametags";
   const displayEvent = eventName?.trim();
 
   return (
     <section className="w-full max-w-[min(90vw,460px)] overflow-hidden rounded-lg border border-[#e9ad88] bg-[#ffe2ce] shadow-[0_18px_40px_rgb(132_62_27_/_0.15)]">
       <div className="flex items-center justify-between border-b border-[#e9ad88] bg-[#ffbf96] px-4 py-3 sm:px-5">
-        <span className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-[#742918]">NameTag</span>
+        <span className="font-badge-mono text-[10px] font-black tracking-normal text-[#742918]">nametags</span>
         <span className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-[#742918]">Room pass</span>
       </div>
       <div className="border-b border-dashed border-[#d99168] px-4 py-4 sm:px-5 sm:py-5">
@@ -42,13 +42,13 @@ export function QRShare({
             bgColor="#fff9f5"
             fgColor="#6d291d"
             className="h-auto w-full"
-            aria-label="QR code for NameTag public card"
+            aria-label="QR code for nametags public card"
           />
         </div>
       </div>
       <div className="flex items-center justify-between border-t border-[#e9ad88] px-4 py-3 text-[11px] font-semibold text-[#8e4128] sm:px-5">
         <span>Scan to open my links</span>
-        <span className="font-badge-mono text-[9px] font-black uppercase tracking-normal">NameTag</span>
+        <span className="font-badge-mono text-[9px] font-black tracking-normal">nametags</span>
       </div>
     </section>
   );
