@@ -709,6 +709,33 @@ export function NametagApp() {
     setView("brief");
   }
 
+  function removeSampleEvents() {
+    const sampleEventIds = new Set(state.events.filter((event) => event.isDemo).map((event) => event.id));
+    if (!sampleEventIds.size) return;
+
+    const sampleCardIds = new Set(
+      state.cards.filter((card) => sampleEventIds.has(card.eventId)).map((card) => card.id)
+    );
+    const sampleContactIds = new Set(
+      state.contacts
+        .filter((contact) => sampleEventIds.has(contact.eventId) || sampleCardIds.has(contact.cardId))
+        .map((contact) => contact.id)
+    );
+    const remainingWorkspace: NametagState = {
+      ...state,
+      events: state.events.filter((event) => !sampleEventIds.has(event.id)),
+      cards: state.cards.filter((card) => !sampleCardIds.has(card.id)),
+      contacts: state.contacts.filter((contact) => !sampleContactIds.has(contact.id)),
+      followUps: state.followUps.filter((followUp) => !sampleContactIds.has(followUp.contactId)),
+      eventNotes: (state.eventNotes ?? []).filter((note) => !sampleEventIds.has(note.eventId))
+    };
+
+    setState(remainingWorkspace);
+    setActiveCardId(remainingWorkspace.cards[0]?.id ?? "");
+    setHasOnboarded(hasWorkspaceContent(remainingWorkspace));
+    setView("home");
+  }
+
   async function signOut() {
     const supabase = getSupabaseBrowserClient();
     setMenuOpen(false);
@@ -874,6 +901,8 @@ export function NametagApp() {
                   selectCard={selectCard}
                   startNewEvent={startNewEvent}
                   startDemoEvent={startDemoEvent}
+                  removeSampleEvents={removeSampleEvents}
+                  canRemoveSampleEvents={!demoMode && session?.user.email !== "demo@nametag.app"}
                 />
               )}
               {view === "prep" && (
@@ -1655,19 +1684,24 @@ function EventsHomeScreen({
   activeCardId,
   selectCard,
   startNewEvent,
-  startDemoEvent
+  startDemoEvent,
+  removeSampleEvents,
+  canRemoveSampleEvents
 }: {
   state: NametagState;
   activeCardId?: string;
   selectCard: (cardId: string, nextView?: View) => void;
   startNewEvent: () => void;
   startDemoEvent: () => void;
+  removeSampleEvents: () => void;
+  canRemoveSampleEvents: boolean;
 }) {
   const activeCard = state.cards.find((card) => card.id === activeCardId) ?? state.cards[0];
   const activeEvent = activeCard
     ? state.events.find((event) => event.id === activeCard.eventId)
     : state.events[0];
   const savedCards = state.cards.filter((card) => card.id !== activeCard?.id);
+  const sampleEventCount = state.events.filter((event) => event.isDemo).length;
 
   if (!state.cards.length) {
     return (
@@ -1724,6 +1758,21 @@ function EventsHomeScreen({
           <p className="app-info-copy mt-2 text-slate-600">Research what matters, share one clear card, then keep every promise in view.</p>
         </div>
       </div>
+      {sampleEventCount > 0 && canRemoveSampleEvents && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+          <p className="text-xs font-semibold leading-5 text-amber-900">
+            {sampleEventCount === 1 ? "A sample event is in this workspace." : `${sampleEventCount} sample events are in this workspace.`}
+          </p>
+          <button
+            type="button"
+            onClick={removeSampleEvents}
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-amber-300 bg-white px-2.5 text-xs font-black text-amber-900 transition hover:border-coral hover:text-coral"
+          >
+            <Trash2 className="size-3.5" />
+            Remove sample event
+          </button>
+        </section>
+      )}
       {activeCard && activeEvent && (
         <CompactEventSummary
           card={activeCard}
