@@ -130,11 +130,16 @@ export function AuthScreen({
       setError(readableAuthError(signUpError.message));
       return;
     }
-    setMessage(
-      data.session
-        ? "Account created. Opening your workspace now."
-        : "Check your inbox to confirm your email, then come back to NameTag."
-    );
+    if (data.session) {
+      setMessage("Account created. Opening your workspace now.");
+      return;
+    }
+
+    // With email confirmation enabled, Supabase deliberately returns a
+    // non-specific response for existing addresses as well as new accounts.
+    // Keep that protection, then give the person a clear next action.
+    setMode("sign-in");
+    setMessage("Check your inbox to confirm this address, then sign in. If you have used this email before, sign in instead.");
   }
 
   async function sendMagicLink() {
