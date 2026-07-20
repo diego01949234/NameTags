@@ -23,7 +23,7 @@ Use **Explore a sample event** when you want the same guided walkthrough without
 
 ## Product Flow
 
-1. **Before - Understand:** Sign in once, add an event URL, description, or screenshot, then get a grounded event brief and ask follow-up research questions until the room makes sense. A clearly labelled fictional sample event lets a reviewer try this without an account.
+1. **Before - Understand:** Sign in once, paste an event URL, type a short event name/date for live web research, write a description, or add a screenshot. NameTag turns that material into a grounded event brief and preserves the same context for follow-up research questions. A clearly labelled fictional sample event lets a reviewer try this without an account.
 2. **During - Show QR:** Choose the few public links that make sense for this room, then show one event-specific QR code. The scanner sees only those selected links, can save the card, and can explicitly opt in to share their own contact and conversation note.
 3. **After - Follow up:** Review people, private notes, follow-up drafts, and the next real action. Add people from paper cards or introductions, record promises, and deliberately move each follow-up from to send to sent to done.
 
@@ -114,9 +114,12 @@ Add these values to `.env.local`:
 OPENAI_API_KEY=your_key_here
 # Optional. Defaults to the lower-cost GPT-5.6 Terra model.
 OPENAI_MODEL=gpt-5.6-terra
+# Optional. Used only when someone enters a short event name/date rather than a URL.
+# Defaults to gpt-5.6 for live web research.
+OPENAI_RESEARCH_MODEL=gpt-5.6
 ```
 
-`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. `app/api/brief/route.ts` fetches public event metadata/text and refuses thin SPA pages rather than generating a fake brief. The owner can open the captured event source from the research section of the brief.
+`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. The owner can open every captured source from the research section of the brief.
 
 ## Key Screens
 

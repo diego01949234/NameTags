@@ -71,6 +71,7 @@ import type {
   PublicCard,
   ResearchChatResult,
   ResearchMessage,
+  ResearchSource,
   UserProfile,
   UserLink
 } from "@/lib/types";
@@ -81,6 +82,16 @@ type ManualContactInput = Pick<Contact, "name" | "contact" | "note" | "promise" 
 type CloudStatus = "saved" | "saving" | "error";
 type WorkspaceStorageMode = "account" | "device" | "sample";
 type EventScreenshot = { dataUrl: string; name: string };
+type EventBriefResponse = {
+  ok?: boolean;
+  title?: string;
+  text?: string;
+  sourceUrl?: string;
+  sources?: ResearchSource[];
+  contentQuality?: Event["researchQuality"];
+  searchUnavailable?: boolean;
+  error?: string;
+};
 
 const MAX_EVENT_SCREENSHOT_BYTES = 3 * 1024 * 1024;
 const acceptedEventScreenshotTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -428,6 +439,7 @@ export function NametagApp() {
       let groundedDescription = eventInput;
       let researchContext = eventInput;
       let researchSourceUrl: string | undefined;
+      let researchSources: ResearchSource[] | undefined;
       let researchQuality: Event["researchQuality"] = "description";
       let screenshotContext = "";
 
@@ -462,40 +474,35 @@ export function NametagApp() {
         researchQuality = "screenshot";
       }
 
-      if (/^https?:\/\//i.test(eventInput)) {
+      const eventUrl = /^https?:\/\//i.test(eventInput);
+      const shouldSearchLive = shouldUseLiveEventResearch(eventInput);
+
+      if (eventUrl || shouldSearchLive) {
         const brief = await fetch("/api/brief", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url: eventInput })
+          body: JSON.stringify(eventUrl ? { url: eventInput } : { query: eventInput })
         })
           .then((response) => response.json())
-          .catch(
-            () =>
-              null as null | {
-                ok?: boolean;
-                title?: string;
-                text?: string;
-                sourceUrl?: string;
-                contentQuality?: Event["researchQuality"];
-                error?: string;
-              }
-          );
+          .catch(() => null as EventBriefResponse | null);
 
         if (brief?.ok && brief.text) {
           resolvedEventName = brief.title?.trim() || resolvedEventName;
           groundedDescription = [
             eventInput,
-            `Fetched event page title: ${brief.title}\nFetched event page text: ${brief.text}`,
+            `${brief.contentQuality === "web" ? "Live web research" : "Fetched event page"} title: ${brief.title}\nResearch text: ${brief.text}`,
             screenshotContext
           ]
             .filter(Boolean)
             .join("\n\n");
-          researchContext = [brief.text, screenshotContext].filter(Boolean).join("\n\n");
+          const sourceContext = (brief.sources ?? [])
+            .map((source) => `Source: ${source.title} (${source.url})`)
+            .join("\n");
+          researchContext = [brief.text, sourceContext, screenshotContext].filter(Boolean).join("\n\n");
           researchSourceUrl = brief.sourceUrl;
-          researchQuality = brief.contentQuality === "body" || brief.contentQuality === "metadata"
-            ? brief.contentQuality
-            : "thin";
-        } else {
+          researchSources = brief.sources;
+          researchQuality = brief.contentQuality ?? "description";
+        } else if (eventUrl) {
           setGenerationError(
             brief?.error ?? "We could not read that event page. Paste a short event description instead."
           );
@@ -514,6 +521,7 @@ export function NametagApp() {
         networkingRole: state.profile.networkingRole,
         researchContext,
         researchSourceUrl,
+        researchSources,
         researchQuality,
         createdAt: new Date().toISOString()
       };
@@ -2036,9 +2044,18 @@ function EventContextStrip({
 function getResearchSourceLabel(event?: Event) {
   if (event?.researchQuality === "body") return "Event page";
   if (event?.researchQuality === "metadata") return "Page details";
+  if (event?.researchQuality === "web") return "Live web research";
   if (event?.researchQuality === "screenshot") return "Screenshot";
   if (event?.researchQuality === "thin") return "Limited page details";
   return "Your description";
+}
+
+function shouldUseLiveEventResearch(value: string) {
+  const input = value.trim();
+  if (!input || /^https?:\/\//i.test(input)) return false;
+  // Short entries are usually an event name/date or a search-style description.
+  // Longer pasted descriptions are already more useful as direct source material.
+  return input.length >= 3 && input.length <= 320 && !input.includes("\n\n");
 }
 
 function describeResearchPersonalization(profile: UserProfile, role: NetworkingRole) {
@@ -2142,7 +2159,7 @@ function PrepScreen({
         <MiniBadge tone="coral">Subway mode</MiniBadge>
         <h2 className="app-screen-title mt-3 text-ink">What room are you walking into?</h2>
         <p className="app-info-copy mt-2 text-slate-600">
-          Paste a link, write one sentence, or add a screenshot. NameTag reads the room first, then gives you the facts, people, and questions that matter.
+          Paste a link, search an event name and date, write one sentence, or add a screenshot. Short searches use live web research first.
         </p>
       </div>
 
@@ -2151,7 +2168,7 @@ function PrepScreen({
           className={`${inputClass} min-h-28 resize-none`}
           value={eventDescription}
           onChange={(event) => setEventDescription(event.target.value)}
-          placeholder="https://event-page.com or ‘AI builder meetup with demos and founders in Taipei’"
+          placeholder="‘July 26 Taiwan Day baseball’ or https://event-page.com"
           required={!eventScreenshot}
         />
       </Field>
@@ -2684,6 +2701,11 @@ function BriefScreen({
   const speakerHighlights = brief.speakerHighlights.slice(0, 3);
   const visibleSignals = roomSignals.slice(0, 3);
   const nervousQuestions = brief.questionsToAsk.slice(0, 3);
+  const researchSources = event?.researchSources?.length
+    ? event.researchSources
+    : event?.researchSourceUrl
+      ? [{ title: sourceLabel, url: event.researchSourceUrl }]
+      : [];
 
   return (
     <div className="space-y-4 lg:space-y-5">
@@ -2709,14 +2731,14 @@ function BriefScreen({
       <section className="rounded-xl border border-line bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="app-kicker text-cobalt">The event read</div>
-          {event?.researchSourceUrl && (
+          {researchSources.length > 0 && (
             <a
-              href={event.researchSourceUrl}
+              href={researchSources[0].url}
               target="_blank"
               rel="noreferrer"
               className="inline-flex min-h-8 items-center gap-1.5 text-xs font-black text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
             >
-              Source
+              {researchSources.length > 1 ? `Sources (${researchSources.length})` : "Source"}
               <ArrowUpRight className="size-3.5" />
             </a>
           )}
@@ -2754,6 +2776,26 @@ function BriefScreen({
               </p>
             )}
           </div>
+
+          {researchSources.length > 0 && (
+            <div>
+              <div className="app-kicker text-slate-soft">Sources</div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {researchSources.map((source) => (
+                  <a
+                    key={source.url}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-wash px-2.5 py-1.5 text-xs font-bold text-cobalt transition hover:border-cobalt hover:bg-cobalt/5"
+                  >
+                    <span className="truncate">{source.title}</span>
+                    <ArrowUpRight className="size-3 shrink-0" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <details className="mt-3 border-t border-line pt-3">
@@ -2900,7 +2942,8 @@ function ResearchChat({
             focus: event.focus,
             urlOrDescription: event.urlOrDescription,
             researchContext: event.researchContext,
-            researchSourceUrl: event.researchSourceUrl
+            researchSourceUrl: event.researchSourceUrl,
+            researchSources: event.researchSources
           },
           brief: card.prepBrief,
           question: content,

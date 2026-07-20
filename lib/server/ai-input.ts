@@ -88,7 +88,14 @@ export function sanitizeResearchRequest(value: unknown): ResearchChatRequest | n
       focus: cleanText(event.focus, 320),
       urlOrDescription: cleanText(event.urlOrDescription, 7_500),
       researchContext: cleanText(event.researchContext, 7_000),
-      researchSourceUrl: cleanText(event.researchSourceUrl, 2_048)
+      researchSourceUrl: cleanText(event.researchSourceUrl, 2_048),
+      researchSources: (Array.isArray(event.researchSources) ? event.researchSources : [])
+        .slice(0, 4)
+        .map((source) => ({
+          title: cleanText(source?.title, 180),
+          url: cleanText(source?.url, 2_048)
+        }))
+        .filter((source) => source.url)
     },
     brief: sanitizePrepBrief(asRecord(payload?.brief) as PrepBrief),
     question: cleanText(payload?.question, 600),

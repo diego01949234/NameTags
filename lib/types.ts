@@ -53,6 +53,11 @@ export type EventGoal =
   | "meet_mentors"
   | "meet_founders";
 
+export type ResearchSource = {
+  title: string;
+  url: string;
+};
+
 export type Event = {
   id: string;
   userId: string;
@@ -65,7 +70,8 @@ export type Event = {
   networkingRole?: NetworkingRole;
   researchContext?: string;
   researchSourceUrl?: string;
-  researchQuality?: "body" | "metadata" | "description" | "thin" | "screenshot";
+  researchSources?: ResearchSource[];
+  researchQuality?: "body" | "metadata" | "web" | "description" | "thin" | "screenshot";
   isDemo?: boolean;
   debrief?: EventDebrief;
   cardId?: string;
@@ -119,7 +125,10 @@ export type ResearchMessage = {
 
 export type ResearchChatRequest = {
   profile: UserProfile;
-  event: Pick<Event, "name" | "goal" | "focus" | "urlOrDescription" | "researchContext" | "researchSourceUrl">;
+  event: Pick<
+    Event,
+    "name" | "goal" | "focus" | "urlOrDescription" | "researchContext" | "researchSourceUrl" | "researchSources"
+  >;
   brief: PrepBrief;
   question: string;
   history: Array<Pick<ResearchMessage, "role" | "content">>;
