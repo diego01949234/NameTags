@@ -7,6 +7,13 @@ import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type AuthMode = "sign-in" | "sign-up" | "forgot-password" | "reset-password";
 
+// This is a deliberately public, fictional workspace for reviewers. It must
+// never contain personal links, private notes, or production user data.
+const demoAccount = {
+  email: "demo@nametag.app",
+  password: "NameTagDemo!2026"
+};
+
 const modeCopy: Record<AuthMode, { eyebrow: string; title: string; body: string }> = {
   "sign-in": {
     eyebrow: "Your NameTag workspace",
@@ -32,10 +39,12 @@ const modeCopy: Record<AuthMode, { eyebrow: string; title: string; body: string 
 
 export function AuthScreen({
   onTryDemo,
+  onDemoAccountOpened,
   initialMode = "sign-in",
   onPasswordUpdated
 }: {
   onTryDemo: () => void;
+  onDemoAccountOpened?: () => void;
   initialMode?: AuthMode;
   onPasswordUpdated?: () => void;
 }) {
@@ -104,15 +113,30 @@ export function AuthScreen({
 
   async function signInWithPassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    await signInWithCredentials(email, password);
+  }
+
+  async function signInWithCredentials(nextEmail: string, nextPassword: string) {
     const supabase = getSupabaseBrowserClient();
-    if (!supabase || !email.trim() || !password) return;
+    if (!supabase || !nextEmail.trim() || !nextPassword) return false;
     beginRequest();
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password
+      email: nextEmail.trim(),
+      password: nextPassword
     });
     setIsWorking(false);
-    if (signInError) setError(readableAuthError(signInError.message));
+    if (signInError) {
+      setError(readableAuthError(signInError.message));
+      return false;
+    }
+    return true;
+  }
+
+  async function signInAsDemo() {
+    setEmail(demoAccount.email);
+    setPassword(demoAccount.password);
+    const didSignIn = await signInWithCredentials(demoAccount.email, demoAccount.password);
+    if (didSignIn) onDemoAccountOpened?.();
   }
 
   async function signUp(event: FormEvent<HTMLFormElement>) {
@@ -268,6 +292,22 @@ export function AuthScreen({
                   New to NameTag? <span className="text-cobalt">Create an account</span>
                 </button>
               </form>
+            )}
+
+            {mode === "sign-in" && (
+              <button
+                type="button"
+                onClick={() => void signInAsDemo()}
+                disabled={isWorking}
+                className="flex w-full items-center justify-between gap-3 rounded-lg border border-[#e9ad88] bg-[#fff0e5] px-3 py-3 text-left transition hover:border-[#c86b48] hover:bg-[#ffe2ce] disabled:cursor-not-allowed disabled:opacity-55"
+              >
+                <span>
+                  <span className="block font-badge-mono text-[10px] font-black uppercase tracking-normal text-[#a6472b]">Build Week reviewer</span>
+                  <span className="mt-1 block text-sm font-black text-[#5f2319]">Open the demo account</span>
+                  <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#8e4128]">A prepared fictional workspace. No setup needed.</span>
+                </span>
+                {isWorking ? <Loader2 className="size-4 shrink-0 animate-spin text-[#a6472b]" /> : <ArrowRight className="size-4 shrink-0 text-[#a6472b]" />}
+              </button>
             )}
 
             {mode === "sign-up" && (

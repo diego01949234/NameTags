@@ -10,6 +10,17 @@ NameTag is a mobile-first before/during/after event application for people who f
 
 The fictional sample event is the fastest way to inspect the core flow without creating an account. Google sign-in becomes available only after its Supabase and Google Cloud provider configuration is complete; email/password and magic-link entry remain available as account alternatives.
 
+## Demo Account
+
+The sign-in page includes **Open the demo account** for Build Week reviewers. It signs in, then opens a fresh fictional workspace so one reviewer's changes cannot affect the next person's walkthrough. It contains no personal data.
+
+```text
+Email: demo@nametag.app
+Password: NameTagDemo!2026
+```
+
+Use **Explore a sample event** when you want the same guided walkthrough without signing in. Demo data is for review only; do not add personal links, private notes, or real contacts to it.
+
 ## Product Flow
 
 1. **Before - Understand:** Sign in once, add an event URL, description, or screenshot, then get a grounded event brief and ask follow-up research questions until the room makes sense. A clearly labelled fictional sample event lets a reviewer try this without an account.

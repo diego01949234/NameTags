@@ -779,10 +779,10 @@ export function NametagApp() {
 
   if (authConfigured && !authReady) return <AccountLoadingScreen />;
   if (authConfigured && passwordRecoveryMode && session) {
-    return <AuthScreen onTryDemo={startDemoEvent} initialMode="reset-password" onPasswordUpdated={() => setPasswordRecoveryMode(false)} />;
+    return <AuthScreen onTryDemo={startDemoEvent} onDemoAccountOpened={startDemoEvent} initialMode="reset-password" onPasswordUpdated={() => setPasswordRecoveryMode(false)} />;
   }
-  if (authConfigured && !session && !demoMode) return <AuthScreen onTryDemo={startDemoEvent} />;
-  if (authConfigured && session && !cloudReady) return <AccountLoadingScreen />;
+  if (authConfigured && !session && !demoMode) return <AuthScreen onTryDemo={startDemoEvent} onDemoAccountOpened={startDemoEvent} />;
+  if (authConfigured && session && !demoMode && !cloudReady) return <AccountLoadingScreen />;
 
   function addEventNote(body: string) {
     if (!activeCard || !body.trim()) return;
