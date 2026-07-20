@@ -278,7 +278,7 @@ function getStructuredNames(value: unknown) {
   ).slice(0, 6);
 }
 
-function getStructuredText(value: unknown, maxLength: number) {
+function getStructuredText(value: unknown, maxLength: number): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string" || typeof value === "number") {
     return cleanStructuredText(String(value)).slice(0, maxLength);
