@@ -208,7 +208,7 @@ export function NametagApp() {
 
       if (cancelled) return;
       if (error) {
-        const workspace = claimStateForUser(stateRef.current, userId, accountName);
+        const workspace = createInitialWorkspaceForAccount(stateRef.current, userId, accountName);
         setState(workspace);
         setHasOnboarded(hasWorkspaceContent(workspace));
         setCloudStatus("error");
@@ -223,7 +223,7 @@ export function NametagApp() {
         setHasOnboarded(hasWorkspaceContent(workspace));
         setCloudStatus("saved");
       } else {
-        const workspace = claimStateForUser(stateRef.current, userId, accountName);
+        const workspace = createInitialWorkspaceForAccount(stateRef.current, userId, accountName);
         setState(workspace);
         setHasOnboarded(hasWorkspaceContent(workspace));
         const { error: saveError } = await saveWorkspace(userId, workspace);
@@ -1046,6 +1046,13 @@ function claimStateForUser(workspace: NametagState, userId: string, accountName 
     events: workspace.events.map((event) => ({ ...event, userId })),
     cards: workspace.cards.map((card) => ({ ...card, userId }))
   };
+}
+
+function createInitialWorkspaceForAccount(localWorkspace: NametagState, userId: string, accountName = "") {
+  // A first-time sign-in may import a device-only workspace, but never one
+  // already associated with another account or the temporary sample event.
+  const canImportDeviceWorkspace = localWorkspace.profile.id === "user_local" || localWorkspace.profile.id === userId;
+  return claimStateForUser(canImportDeviceWorkspace ? localWorkspace : initialState, userId, accountName);
 }
 
 function hasWorkspaceContent(workspace: NametagState) {
