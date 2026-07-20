@@ -990,6 +990,8 @@ export function NametagApp() {
               {view === "share" && activeCard && (
                 <ShareScreen
                   publicUrl={publicUrl}
+                  ownerName={state.profile.name}
+                  eventName={activeEvent?.name}
                   linkLabels={activeCard.selectedLinkIds.flatMap((linkId) => {
                     const link = state.links.find((item) => item.id === linkId);
                     return link ? [link.label] : [];
@@ -3320,10 +3322,14 @@ function followUpWindowLabel(window?: Contact["followUpWindow"]) {
 
 function ShareScreen({
   publicUrl,
+  ownerName,
+  eventName,
   linkLabels,
   onEditLinks
 }: {
   publicUrl: string;
+  ownerName: string;
+  eventName?: string;
   linkLabels: string[];
   onEditLinks: () => void;
 }) {
@@ -3340,7 +3346,7 @@ function ShareScreen({
         </button>
         <span className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-slate-soft">Your QR</span>
       </div>
-      <QRShare publicUrl={publicUrl} />
+      <QRShare publicUrl={publicUrl} ownerName={ownerName} eventName={eventName} />
       <button
         type="button"
         onClick={onEditLinks}
