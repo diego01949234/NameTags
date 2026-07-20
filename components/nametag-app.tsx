@@ -120,6 +120,8 @@ export function NametagApp() {
   const [generationError, setGenerationError] = useState("");
   const [, setGenerationMode] = useState("ready");
   const [publishMode, setPublishMode] = useState("ready");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishError, setPublishError] = useState("");
   const [origin, setOrigin] = useState("http://localhost:3000");
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
@@ -332,21 +334,43 @@ export function NametagApp() {
     : state.events[0];
   const publicUrl = activeCard ? `${origin}/c/${activeCard.id}` : `${origin}/c/card_builder`;
 
-  useEffect(() => {
-    if (!hydrated || !activeCard || !activeEvent) return;
+  async function publishActiveCard() {
+    if (!activeCard || !activeEvent) return false;
+
     const publicCard = buildPublicCard(activeCard, activeEvent, state);
-    fetch(`/api/public-card/${activeCard.id}`, {
+    const response = await fetch(`/api/public-card/${activeCard.id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ card: publicCard, ownerSyncKey: activeCard.ownerSyncKey })
-    })
-      .then(async (response) => {
-        const data = (await response.json()) as { mode?: string; error?: string };
-        if (!response.ok) throw new Error(data.error ?? "Could not publish public card");
-        return data;
-      })
-      .then((data: { mode?: string }) => setPublishMode(data.mode ?? "public fallback ready"))
-      .catch(() => setPublishMode("unavailable"));
+    });
+    const data = (await response.json()) as { mode?: string; error?: string };
+    if (!response.ok) throw new Error(data.error ?? "Could not publish public card");
+
+    setPublishMode(data.mode ?? "public fallback ready");
+    return true;
+  }
+
+  async function showQrWithLatestLinks() {
+    setPublishError("");
+    setIsPublishing(true);
+    try {
+      const published = await publishActiveCard();
+      if (published) setView("share");
+    } catch (error) {
+      setPublishMode("unavailable");
+      setPublishError(
+        error instanceof Error
+          ? error.message
+          : "We could not update this public card. Check your connection and try again."
+      );
+    } finally {
+      setIsPublishing(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!hydrated || !activeCard || !activeEvent) return;
+    void publishActiveCard().catch(() => setPublishMode("unavailable"));
   }, [
     activeCard,
     activeEvent,
@@ -959,6 +983,9 @@ export function NametagApp() {
                   toggleCardLink={toggleCardLink}
                   setPrimaryCardLink={setPrimaryCardLink}
                   onNavigate={setView}
+                  onShowQr={showQrWithLatestLinks}
+                  isPublishing={isPublishing}
+                  publishError={publishError}
                 />
               )}
               {view === "share" && activeCard && (
@@ -2988,7 +3015,10 @@ function CardReviewScreen({
   updateProfile,
   toggleCardLink,
   setPrimaryCardLink,
-  onNavigate
+  onNavigate,
+  onShowQr,
+  isPublishing,
+  publishError
 }: {
   card: NametagCard;
   event?: Event;
@@ -3000,6 +3030,9 @@ function CardReviewScreen({
   toggleCardLink: (linkId: string) => void;
   setPrimaryCardLink: (linkId: string) => void;
   onNavigate: (view: RoomView) => void;
+  onShowQr: () => Promise<void>;
+  isPublishing: boolean;
+  publishError: string;
 }) {
   const selectedLinks = card.selectedLinkIds
     .map((id) => links.find((link) => link.id === id))
@@ -3180,9 +3213,23 @@ function CardReviewScreen({
         />
       </details>
 
-      <PrimaryButton onClick={() => onNavigate("share")}>
-        Save choices and show QR
-        <ArrowRight className="size-4" />
+      {publishError && (
+        <p role="status" className="rounded-lg border border-coral/30 bg-coral/10 px-3 py-2.5 text-xs font-semibold leading-5 text-coral">
+          We could not update your public card yet. Your link choices are still here - check the connection and try again.
+        </p>
+      )}
+      <PrimaryButton disabled={isPublishing} onClick={() => void onShowQr()}>
+        {isPublishing ? (
+          <>
+            <Loader2 className="size-4 animate-spin" />
+            Updating your QR...
+          </>
+        ) : (
+          <>
+            Save choices and show QR
+            <ArrowRight className="size-4" />
+          </>
+        )}
       </PrimaryButton>
         </div>
       </div>
