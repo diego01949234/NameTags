@@ -117,9 +117,14 @@ OPENAI_MODEL=gpt-5.6-terra
 # Optional. Used only when someone enters a short event name/date rather than a URL.
 # Defaults to gpt-5.6 for live web research.
 OPENAI_RESEARCH_MODEL=gpt-5.6
+# Optional. Defaults to high so research and follow-up quality win over a small
+# latency saving. Set only after evaluating a different tradeoff.
+OPENAI_REASONING_EFFORT=high
+# Optional. Event screenshot reading defaults to OPENAI_RESEARCH_MODEL.
+OPENAI_VISION_MODEL=gpt-5.6
 ```
 
-`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. The owner can open every captured source from the research section or the corresponding chat answer.
+`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. All GPT decision calls default to high reasoning effort. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title is then used for live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. The owner can open every captured source from the research section or the corresponding chat answer.
 
 ## Key Screens
 

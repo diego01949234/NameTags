@@ -71,7 +71,7 @@ export type Event = {
   researchContext?: string;
   researchSourceUrl?: string;
   researchSources?: ResearchSource[];
-  researchQuality?: "body" | "metadata" | "web" | "description" | "thin" | "screenshot";
+  researchQuality?: "body" | "metadata" | "web" | "description" | "thin" | "screenshot" | "screenshot_web";
   isDemo?: boolean;
   debrief?: EventDebrief;
   cardId?: string;

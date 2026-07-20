@@ -442,6 +442,7 @@ export function NametagApp() {
       let researchSources: ResearchSource[] | undefined;
       let researchQuality: Event["researchQuality"] = "description";
       let screenshotContext = "";
+      let screenshotSearchQuery = "";
 
       if (eventScreenshot) {
         const screenshot = await fetch("/api/event-image", {
@@ -469,19 +470,24 @@ export function NametagApp() {
 
         resolvedEventName = screenshot.title?.trim() || resolvedEventName;
         screenshotContext = `Event details extracted from screenshot:\n${screenshot.text}`;
+        screenshotSearchQuery = buildScreenshotResearchQuery(screenshot.title, screenshot.text);
         groundedDescription = [eventInput, screenshotContext].filter(Boolean).join("\n\n");
         researchContext = groundedDescription;
         researchQuality = "screenshot";
       }
 
       const eventUrl = /^https?:\/\//i.test(eventInput);
-      const shouldSearchLive = shouldUseLiveEventResearch(eventInput);
+      const liveSearchQuery = shouldUseLiveEventResearch(eventInput)
+        ? eventInput
+        : !eventUrl
+          ? screenshotSearchQuery
+          : "";
 
-      if (eventUrl || shouldSearchLive) {
+      if (eventUrl || liveSearchQuery) {
         const brief = await fetch("/api/brief", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(eventUrl ? { url: eventInput } : { query: eventInput })
+          body: JSON.stringify(eventUrl ? { url: eventInput } : { query: liveSearchQuery })
         })
           .then((response) => response.json())
           .catch(() => null as EventBriefResponse | null);
@@ -501,7 +507,7 @@ export function NametagApp() {
           researchContext = [brief.text, sourceContext, screenshotContext].filter(Boolean).join("\n\n");
           researchSourceUrl = brief.sourceUrl;
           researchSources = brief.sources;
-          researchQuality = brief.contentQuality ?? "description";
+          researchQuality = screenshotContext && brief.contentQuality === "web" ? "screenshot_web" : brief.contentQuality ?? "description";
         } else if (eventUrl) {
           setGenerationError(
             brief?.error ?? "We could not read that event page. Paste a short event description instead."
@@ -2045,6 +2051,7 @@ function getResearchSourceLabel(event?: Event) {
   if (event?.researchQuality === "body") return "Event page";
   if (event?.researchQuality === "metadata") return "Page details";
   if (event?.researchQuality === "web") return "Live web research";
+  if (event?.researchQuality === "screenshot_web") return "Screenshot + web-checked";
   if (event?.researchQuality === "screenshot") return "Screenshot";
   if (event?.researchQuality === "thin") return "Limited page details";
   return "Your description";
@@ -2056,6 +2063,20 @@ function shouldUseLiveEventResearch(value: string) {
   // Short entries are usually an event name/date or a search-style description.
   // Longer pasted descriptions are already more useful as direct source material.
   return input.length >= 3 && input.length <= 320 && !input.includes("\n\n");
+}
+
+function buildScreenshotResearchQuery(title: string | undefined, text: string) {
+  const eventTitle = title?.replace(/\s+/g, " ").trim() ?? "";
+  if (!eventTitle || eventTitle.length < 4 || /^(event|untitled event|flyer|poster)$/i.test(eventTitle)) return "";
+
+  // A poster's title plus its first factual line is typically enough to resolve a
+  // canonical event without sending the entire screenshot extraction to search.
+  const context = text
+    .replace(/\s+/g, " ")
+    .replace(/^\s*(title|event)\s*:\s*/i, "")
+    .trim()
+    .slice(0, 180);
+  return `${eventTitle} ${context}`.trim().slice(0, 320);
 }
 
 function describeResearchPersonalization(profile: UserProfile, role: NetworkingRole) {
@@ -2187,7 +2208,7 @@ function PrepScreen({
                 Screenshot ready
               </div>
               <p className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{eventScreenshot.name}</p>
-              <p className="mt-1 text-xs font-semibold leading-5 text-teal-800">NameTag will read visible event facts, then discard the image.</p>
+              <p className="mt-1 text-xs font-semibold leading-5 text-teal-800">Nametags reads visible event facts, checks a recognizable event on the web, then discards the image.</p>
             </div>
             <button
               type="button"

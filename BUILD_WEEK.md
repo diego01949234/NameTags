@@ -35,7 +35,7 @@ The server-side OpenAI Responses API calls use `OPENAI_MODEL` (default `gpt-5.6-
 - grounded follow-up research chat in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts)
 - prioritization and editable follow-up drafts in [`app/api/debrief/route.ts`](./app/api/debrief/route.ts)
 
-Short event-name/date searches use `OPENAI_RESEARCH_MODEL` (default `gpt-5.6`) with the Responses API `web_search` tool in [`app/api/brief/route.ts`](./app/api/brief/route.ts). Factual chat questions use the same public-only lookup in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts), then a separate model call uses the private profile only to tailor advice. Each web-backed answer stores up to three visible source links.
+Short event-name/date searches use `OPENAI_RESEARCH_MODEL` (default `gpt-5.6`) with the Responses API `web_search` tool in [`app/api/brief/route.ts`](./app/api/brief/route.ts). These research calls default to `OPENAI_REASONING_EFFORT=high`: the model privately resolves the event identity, checks material facts against strong sources, and returns a compact sourced read rather than a chain-of-thought. Uploaded screenshots use `input_image` in [`app/api/event-image/route.ts`](./app/api/event-image/route.ts); a recognizable title then triggers the same live lookup. Factual chat questions use the same public-only lookup in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts), then a separate model call uses the private profile only to tailor advice. Each web-backed answer stores up to three visible source links.
 
 Every AI route has a deterministic fallback so the core flow remains available if the model or event-page fetch is unavailable. Event research does not invent named speakers or attendees when the source does not support them.
 
@@ -66,5 +66,5 @@ Record the actual result here after the test. Do not replace it with invented nu
 ## Deployment configuration
 
 - Supabase schema: run [`supabase/schema.sql`](./supabase/schema.sql) again after this update to add `contacts.consented_at` if it is not already present.
-- Vercel Production: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `OPENAI_API_KEY`. `OPENAI_RESEARCH_MODEL=gpt-5.6` is optional because that is the live-search default.
+- Vercel Production: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `OPENAI_API_KEY`. `OPENAI_RESEARCH_MODEL=gpt-5.6`, `OPENAI_VISION_MODEL=gpt-5.6`, and `OPENAI_REASONING_EFFORT=high` are optional because those are the quality-first defaults.
 - Supabase Auth: configure Site URL and Google OAuth before relying on the Google entry point. Email magic links remain available as the fallback.
