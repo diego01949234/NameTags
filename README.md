@@ -25,7 +25,7 @@ Use **Explore a sample event** when you want the same guided walkthrough without
 
 1. **Before - Understand:** Sign in once, paste an event URL, type a short event name/date for live web research, write a description, or add a screenshot. NameTag turns that material into a grounded event brief; factual follow-up questions can refresh public web research, while private profile context is used only to tailor advice. A clearly labelled fictional sample event lets a reviewer try this without an account.
 2. **During - Show QR:** Choose the few public links that make sense for this room, then show one event-specific QR code. The scanner sees only those selected links, can save the card, and can explicitly opt in to share their own contact and conversation note.
-3. **After - Follow up:** Review people, private notes, follow-up drafts, and the next real action. Add people from paper cards or introductions, record promises, and deliberately move each follow-up from to send to sent to done.
+3. **After - Follow up:** Review people, private notes, follow-up drafts, and the next real action. Add people from paper cards or introductions, record promises, optionally confirm a person's relevant public context, then deliberately move each follow-up from to send to sent to done.
 
 NameTag is event-first, not profile-first. Your private profile and optional links live in your signed-in Settings workspace; each event creates a distinct public room pass. Links are normalized and format-validated, but v1 deliberately avoids social-account connections or ownership verification.
 
@@ -35,7 +35,7 @@ NameTag is event-first, not profile-first. Your private profile and optional lin
 2. In **Research**, read the source-grounded summary and ask a precise follow-up question.
 3. In **Links**, choose the contact surfaces that belong on this room pass. The owner sees the recommendation and can override it.
 4. In **QR**, show the public card on another device. The scanner sees only the public links and may choose to share their own contact details.
-5. Return to **Follow up** to turn that consented connection and its note into an editable next action.
+5. Return to **Follow up** to turn that consented connection and its note into an editable next action. For an important connection, optionally use **Check person**; Nametags shows a source-linked public match only when it can confirm the identity, then you deliberately refresh the plan.
 
 ## Application Architecture
 
@@ -45,6 +45,7 @@ NameTag is event-first, not profile-first. Your private profile and optional lin
 | Public card | Server route + Supabase | A QR must work on another person's phone. |
 | Scanner contact submission | Server route + Supabase | A consented connection needs to reach the owner's event debrief. |
 | Owner contact polling | Device-held per-card sync key | The public card API never returns another scanner's contact details. |
+| Optional public contact context | Server-only web-search route | The owner explicitly requests a source-linked identity check; private notes, email, and phone are never searched. |
 | AI generation | OpenAI Responses API | Generates grounded prep, research answers, link reasoning, and follow-up language. |
 
 The app has a deterministic fallback when no OpenAI key is present or the provider is temporarily unavailable. It does not fabricate named speakers or scanners.
@@ -102,6 +103,7 @@ The login page also offers email magic links. For a production release, configur
 - A scanner must actively provide their name/contact and consent before NameTag saves a connection. Consent is checked server-side and its timestamp is stored with the connection.
 - The server derives a scanner connection's event from the published QR card. A scanner cannot submit an arbitrary event ID to place themselves into another follow-up queue.
 - The public card `GET` response never includes scanner contacts. The owner app polls with a device-held, per-card sync key that is verified server-side.
+- An owner may explicitly check one contact's public context. That lookup receives only the name, event name, event goal, and an optional public-profile URL. A result is used in AI drafts only after the response confirms the identity and returns visible public sources.
 - The public AI routes use per-client throttling and server-side input bounds. This is a useful hackathon guard, not a replacement for a shared production rate-limit store.
 - The event-page reader only accepts public HTML, bounds the page size, permits one validated redirect, and asks for pasted context when an SPA page is too thin to ground a useful answer.
 - This build includes owner accounts and private-workspace RLS. A production hardening phase still needs a shared rate-limit store, fuller consent controls, encrypted private data, and broader abuse monitoring.
@@ -117,6 +119,8 @@ OPENAI_MODEL=gpt-5.6-terra
 # Optional. Used only when someone enters a short event name/date rather than a URL.
 # Defaults to gpt-5.6 for live web research.
 OPENAI_RESEARCH_MODEL=gpt-5.6
+# Optional. High-context follow-up synthesis defaults to GPT-5.6 as well.
+OPENAI_FOLLOWUP_MODEL=gpt-5.6
 # Optional. Defaults to high so research and follow-up quality win over a small
 # latency saving. Set only after evaluating a different tradeoff.
 OPENAI_REASONING_EFFORT=high
@@ -124,7 +128,7 @@ OPENAI_REASONING_EFFORT=high
 OPENAI_VISION_MODEL=gpt-5.6
 ```
 
-`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. All GPT decision calls default to high reasoning effort. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title is then used for live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. The owner can open every captured source from the research section or the corresponding chat answer.
+`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output and bounded server-side inputs. All GPT decision calls default to high reasoning effort. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API web search tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title is then used for live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. `app/api/contact-research/route.ts` performs a separate, owner-triggered public identity check for a single follow-up; it never searches the contact's email, phone, private notes, or promise. The owner can open every captured source from the research section, chat answer, or confirmed contact context.
 
 ## Key Screens
 

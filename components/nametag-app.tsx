@@ -116,6 +116,49 @@ const linkTypes: LinkType[] = [
 const commonLinkTypes: LinkType[] = ["linkedin", "github", "portfolio", "resume", "website", "email"];
 const additionalLinkTypes: LinkType[] = linkTypes.filter((type) => !commonLinkTypes.includes(type));
 
+const goalFocusSuggestions: Record<EventGoal, string[]> = {
+  find_collaborators: [
+    "Meet one builder whose strengths complement mine.",
+    "Compare my idea with one potential co-founder.",
+    "Find a collaborator for one small experiment."
+  ],
+  show_project: [
+    "Get one sharp piece of feedback on my demo.",
+    "Find one person who could try the product this week.",
+    "Learn the clearest way to explain what I am building."
+  ],
+  find_users: [
+    "Meet someone who feels this problem often.",
+    "Test one assumption about my early users.",
+    "Get one honest reaction to this workflow."
+  ],
+  learn: [
+    "Understand the one idea I should take home.",
+    "Ask an expert about a decision I am stuck on.",
+    "Find one example I can apply this week."
+  ],
+  find_opportunities: [
+    "Leave with one relevant introduction or next step.",
+    "Understand what this room values in a candidate.",
+    "Find one possible client or partnership lead."
+  ],
+  make_friends: [
+    "Have one relaxed conversation beyond small talk.",
+    "Meet someone I would genuinely like to see again.",
+    "Find a shared interest to follow up on."
+  ],
+  meet_mentors: [
+    "Ask one person for specific feedback on my next move.",
+    "Learn how an experienced person would approach this problem.",
+    "Leave with one question worth thinking about."
+  ],
+  meet_founders: [
+    "Compare early-stage lessons with one founder.",
+    "Ask how another founder found their first users.",
+    "Find a founder who can pressure-test my next experiment."
+  ]
+};
+
 export function NametagApp() {
   const authConfigured = hasSupabaseAuthConfig();
   const [state, setState] = useState<NametagState>(initialState);
@@ -960,6 +1003,8 @@ export function NametagApp() {
                   }}
                   eventGoal={eventGoal}
                   setEventGoal={setEventGoal}
+                  eventFocus={eventFocus}
+                  setEventFocus={setEventFocus}
                   hasPrivateContext={Boolean(state.profile.privateContext.trim())}
                   onOpenSettings={() => setView("vault")}
                   isGenerating={isGenerating}
@@ -2159,6 +2204,8 @@ function PrepScreen({
   onEventScreenshotRemove: () => void;
   eventGoal: EventGoal;
   setEventGoal: (value: EventGoal) => void;
+  eventFocus: string;
+  setEventFocus: (value: string) => void;
   hasPrivateContext: boolean;
   onOpenSettings: () => void;
   isGenerating: boolean;
@@ -2173,6 +2220,8 @@ function PrepScreen({
     ["find_collaborators", "show_project", "meet_mentors", "find_opportunities"].includes(key)
   );
   const moreGoals = entries.filter(([key]) => !quickGoals.some(([quickKey]) => quickKey === key));
+  const activeGoal = goalLabels[eventGoal];
+  const focusSuggestions = goalFocusSuggestions[eventGoal];
 
   return (
     <form onSubmit={generateNametag} className="space-y-4 lg:max-w-[820px] lg:space-y-5">
@@ -2251,11 +2300,14 @@ function PrepScreen({
         {eventScreenshotError && <p role="alert" className="mt-2 text-xs font-bold leading-5 text-red-600">{eventScreenshotError}</p>}
       </section>
 
-      <details className="rounded-lg border border-line bg-white p-3">
-        <summary className="app-meta cursor-pointer text-ink">Tailor the research (optional)</summary>
-        <p className="app-meta mt-1 text-slate-soft">
-          Leave this alone to understand the event first. Pick one intention only when it changes which questions or people would be most useful.
-        </p>
+      <section className="rounded-lg border border-line bg-white p-3">
+        <div>
+          <div className="app-kicker text-cobalt">Your outcome</div>
+          <h3 className="mt-1 text-sm font-black text-ink">What would make this room worth it?</h3>
+          <p className="mt-1 text-xs font-semibold leading-5 text-slate-soft">
+            Choose one main outcome. Nametags uses it to decide what to research, ask, and follow up on.
+          </p>
+        </div>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {quickGoals.map(([key, goal]) => (
             <button
@@ -2272,22 +2324,59 @@ function PrepScreen({
               {eventGoal === key && <CheckCircle2 className="size-4 shrink-0" />}
             </button>
           ))}
-          {moreGoals.map(([key, goal]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setEventGoal(key)}
-              className={`app-meta min-h-11 rounded-lg border px-3 py-2 text-left transition ${
-                eventGoal === key
-                  ? "border-cobalt bg-cobalt text-white"
-                  : "border-line bg-white text-ink hover:border-ink"
-              }`}
-            >
-              {goal.label}
-            </button>
-          ))}
         </div>
-      </details>
+        <p className="mt-2 text-xs font-semibold leading-5 text-cobalt">{activeGoal.description}</p>
+        <details className="mt-3 border-t border-line pt-3">
+          <summary className="cursor-pointer text-xs font-black text-slate-600">More ways to use this event</summary>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {moreGoals.map(([key, goal]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setEventGoal(key)}
+                className={`app-meta min-h-11 rounded-lg border px-3 py-2 text-left transition ${
+                  eventGoal === key
+                    ? "border-cobalt bg-cobalt text-white"
+                    : "border-line bg-white text-ink hover:border-ink"
+                }`}
+              >
+                {goal.label}
+              </button>
+            ))}
+          </div>
+        </details>
+        <Field label="Your specific outcome (optional)">
+          <input
+            className={`${inputClass} mt-2`}
+            value={eventFocus}
+            onChange={(event) => setEventFocus(event.target.value)}
+            maxLength={320}
+            placeholder="e.g. Leave with one product leader's feedback on my demo."
+          />
+        </Field>
+        <div className="mt-3 border-t border-line pt-3">
+          <div className="text-xs font-black text-ink">Make it concrete in one tap</div>
+          <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">
+            This gives research, questions, and follow-up one useful filter.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {focusSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => setEventFocus(suggestion)}
+                className={`rounded-md border px-2 py-1.5 text-left text-[11px] font-bold leading-4 transition ${
+                  eventFocus === suggestion
+                    ? "border-cobalt bg-cobalt text-white"
+                    : "border-line bg-wash text-slate-700 hover:border-cobalt hover:text-cobalt"
+                }`}
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
 
       <PrimaryButton type="submit" disabled={isGenerating}>
         {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <ClipboardList className="size-4" />}
@@ -3536,8 +3625,11 @@ function DebriefScreen({
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [organizeError, setOrganizeError] = useState("");
   const [copiedFollowUpId, setCopiedFollowUpId] = useState("");
+  const [researchingContactId, setResearchingContactId] = useState("");
+  const [contactResearchErrors, setContactResearchErrors] = useState<Record<string, string>>({});
   const contacts = state.contacts.filter((contact) => contact.eventId === card.eventId);
   const eventNotes = (state.eventNotes ?? []).filter((note) => note.eventId === card.eventId);
+  const hasConfirmedPublicContext = contacts.some((contact) => contact.publicResearch?.matchStatus === "confirmed");
   const statusFor = (contact: Contact): FollowUp["status"] =>
     state.followUps.find((followUp) => followUp.contactId === contact.id)?.status ??
     (contact.done ? "done" : "to_send");
@@ -3604,6 +3696,43 @@ function DebriefScreen({
     setPersonNote("");
     setPersonPromise("");
     setPersonPriority("medium");
+  }
+
+  async function researchPublicContext(contact: Contact) {
+    if (!event || event.isDemo || researchingContactId) return;
+    setResearchingContactId(contact.id);
+    setContactResearchErrors((current) => {
+      const { [contact.id]: _removed, ...remaining } = current;
+      return remaining;
+    });
+
+    try {
+      const response = await fetch("/api/contact-research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: { name: event.name, goal: event.goal },
+          contact: { id: contact.id, name: contact.name, contact: contact.contact }
+        })
+      });
+      const data = (await response.json()) as { result?: Contact["publicResearch"]; error?: string };
+      if (!response.ok || !data.result) throw new Error(data.error ?? "Could not check public context.");
+
+      setState((current) => ({
+        ...current,
+        contacts: current.contacts.map((item) =>
+          item.id === contact.id ? { ...item, publicResearch: data.result } : item
+        ),
+        events: current.events.map((item) => (item.id === event.id ? { ...item, debrief: undefined } : item))
+      }));
+    } catch (error) {
+      setContactResearchErrors((current) => ({
+        ...current,
+        [contact.id]: error instanceof Error ? error.message : "Could not check public context."
+      }));
+    } finally {
+      setResearchingContactId("");
+    }
   }
 
   async function organizeEvent() {
@@ -3731,14 +3860,14 @@ function DebriefScreen({
         <MiniBadge tone="mint">After the room</MiniBadge>
         <h2 className="app-screen-title mt-3 text-ink">Turn each conversation into one next step.</h2>
         <p className="app-info-copy mt-2 text-slate-600">
-          Add what you remember, let NameTag make an editable draft, then copy it into the channel you already use. You stay in control of sending.
+          Add what you remember, optionally confirm public context for the right person, then make an editable draft. You stay in control of sending.
         </p>
       </div>
 
       <section aria-labelledby="follow-up-how-it-works" className="order-4 rounded-lg border border-line bg-wash px-3 py-3">
         <div id="follow-up-how-it-works" className="app-kicker text-cobalt">Three simple moves</div>
         <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
-          <span className="font-black text-ink">1. Capture</span> who you met. <span className="font-black text-ink">2. Copy</span> the draft you want to send. <span className="font-black text-ink">3. Close</span> it when the next step is done.
+          <span className="font-black text-ink">1. Capture</span> who you met. <span className="font-black text-ink">2. Confirm</span> public context only when useful. <span className="font-black text-ink">3. Send</span> an edited draft and close the next step.
         </p>
       </section>
 
@@ -3816,7 +3945,7 @@ function DebriefScreen({
             </>
           ) : (
             <p className="app-info-copy text-slate-700">
-              Once you have people or notes, NameTag sorts the queue, explains why each person matters, and drafts a first message you can edit before sending.
+              Once you have people or notes, NameTag sorts the queue, explains why each person matters, and drafts a first message you can edit before sending. Confirmed public context is used only as an extra relevance signal.
             </p>
           )}
           <button
@@ -3826,7 +3955,11 @@ function DebriefScreen({
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-cobalt px-4 text-sm font-black text-white shadow-sm shadow-cobalt/20 transition hover:bg-ink disabled:cursor-not-allowed disabled:opacity-45"
           >
             {isOrganizing ? <Loader2 className="size-4 animate-spin" /> : <BadgeCheck className="size-4" />}
-            {event?.debrief ? "Refresh my follow-up plan" : "Organize everyone with AI"}
+            {event?.debrief
+              ? "Refresh my follow-up plan"
+              : hasConfirmedPublicContext
+                ? "Use public context in my plan"
+                : "Organize everyone with AI"}
           </button>
           {!contacts.length && (
             <p className="text-xs font-semibold leading-5 text-slate-soft">
@@ -3869,12 +4002,12 @@ function DebriefScreen({
                 required
               />
             </Field>
-            <Field label="Contact (optional)">
+            <Field label="Email or public profile URL (optional)">
               <input
                 className={inputClass}
                 value={personContact}
                 onChange={(eventChange) => setPersonContact(eventChange.target.value)}
-                placeholder="Email or LinkedIn"
+                placeholder="Email or https://linkedin.com/in/..."
               />
             </Field>
           </div>
@@ -3982,6 +4115,8 @@ function DebriefScreen({
               ? buildFollowUpDraft(contact, event?.name ?? "the event")
               : savedDraft ?? buildFollowUpDraft(contact, event?.name ?? "the event");
             const status = statusFor(contact);
+            const publicResearch = contact.publicResearch;
+            const isResearching = researchingContactId === contact.id;
             return (
               <div key={contact.id} className="rounded-lg border border-line bg-white p-3">
                 <div className="flex items-start justify-between gap-3">
@@ -4007,6 +4142,80 @@ function DebriefScreen({
                     Next step: {contact.promise}
                   </div>
                 )}
+                <div className="mt-3 border-t border-line pt-3">
+                  {event?.isDemo ? (
+                    <p className="text-xs font-semibold leading-5 text-slate-soft">
+                      Public context is off for fictional demo contacts.
+                    </p>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-xs font-black text-ink">Public context</div>
+                          <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">
+                            Optional. Confirms the right person before AI uses it in a draft.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void researchPublicContext(contact)}
+                          disabled={Boolean(researchingContactId)}
+                          className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-md border border-cobalt/25 bg-white px-2 text-[11px] font-black text-cobalt transition hover:border-cobalt hover:bg-cobalt hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+                        >
+                          {isResearching ? <Loader2 className="size-3 animate-spin" /> : <BookOpenText className="size-3" />}
+                          {isResearching
+                            ? "Checking"
+                            : publicResearch?.matchStatus === "confirmed"
+                              ? "Refresh"
+                              : publicResearch
+                                ? "Try again"
+                              : "Check person"}
+                        </button>
+                      </div>
+                      <p className="mt-2 text-[11px] font-semibold leading-4 text-slate-soft">
+                        Searches only their name, this event, and a public-profile URL if you added one. Email, phone, notes, and promises stay private.
+                      </p>
+                      {publicResearch && (
+                        <div className="mt-2">
+                          <MiniBadge tone={publicResearch.matchStatus === "confirmed" ? "mint" : "coral"}>
+                            {publicResearch.matchStatus === "confirmed"
+                              ? "Public match confirmed"
+                              : publicResearch.matchStatus === "ambiguous"
+                                ? "Needs confirmation"
+                                : "No confident match"}
+                          </MiniBadge>
+                          <p className="mt-1.5 text-xs font-semibold leading-5 text-slate-700">{publicResearch.summary}</p>
+                          {publicResearch.matchStatus === "confirmed" && (
+                            <p className="mt-1.5 text-[11px] font-bold leading-4 text-cobalt">
+                              Ready to use. Refresh the AI follow-up plan above to make the draft more relevant.
+                            </p>
+                          )}
+                          {publicResearch.sources.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {publicResearch.sources.map((source) => (
+                                <a
+                                  key={source.url}
+                                  href={source.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex max-w-full items-center gap-1 rounded-md border border-line bg-wash px-2 py-1 text-[10px] font-black text-cobalt transition hover:border-cobalt hover:bg-cobalt/5"
+                                >
+                                  <span className="truncate">{source.title}</span>
+                                  <ArrowUpRight className="size-3 shrink-0" />
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {contactResearchErrors[contact.id] && (
+                        <p role="alert" className="mt-2 text-xs font-bold leading-5 text-red-600">
+                          {contactResearchErrors[contact.id]}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
                 {(contact.followUpReason || contact.followUpWindow) && (
                   <div className="mt-2 rounded-md border border-cobalt/20 bg-cobalt/5 px-2 py-2 text-xs font-semibold leading-5 text-slate-700">
                     <div className="font-badge-mono text-[10px] font-black uppercase tracking-normal text-cobalt">

@@ -1,5 +1,7 @@
 import type {
   Contact,
+  ContactPublicResearch,
+  ContactResearchRequest,
   EventDebriefRequest,
   EventGoal,
   GenerationRequest,
@@ -140,6 +142,26 @@ export function sanitizeDebriefRequest(value: unknown): EventDebriefRequest | nu
   };
 }
 
+export function sanitizeContactResearchRequest(value: unknown): ContactResearchRequest | null {
+  const payload = asRecord(value);
+  const event = asRecord(payload?.event);
+  const contact = asRecord(payload?.contact);
+  const name = cleanText(contact?.name, 120);
+  if (!event || !name) return null;
+
+  return {
+    event: {
+      name: cleanText(event.name, 180) || "This event",
+      goal: isEventGoal(event.goal) ? event.goal : "find_collaborators"
+    },
+    contact: {
+      id: cleanText(contact?.id, 80),
+      name,
+      contact: cleanText(contact?.contact, 240)
+    }
+  };
+}
+
 function sanitizeProfile(value: unknown): UserProfile {
   const profile = asRecord(value);
   return {
@@ -192,6 +214,7 @@ function sanitizePrepBrief(value: PrepBrief): PrepBrief {
 
 function sanitizeContact(contact: unknown): Contact {
   const value = asRecord(contact);
+  const publicResearch = sanitizeContactPublicResearch(value?.publicResearch);
   return {
     id: cleanText(value?.id, 80),
     eventId: cleanText(value?.eventId, 80),
@@ -209,9 +232,50 @@ function sanitizeContact(contact: unknown): Contact {
       value?.followUpWindow === "this_week"
         ? value.followUpWindow
         : undefined,
+    ...(publicResearch ? { publicResearch } : {}),
     done: Boolean(value?.done),
     createdAt: cleanText(value?.createdAt, 80)
   };
+}
+
+function sanitizeContactPublicResearch(value: unknown): ContactPublicResearch | undefined {
+  const research = asRecord(value);
+  if (!research) return undefined;
+  const requestedMatchStatus =
+    research.matchStatus === "confirmed" || research.matchStatus === "ambiguous" || research.matchStatus === "not_found"
+      ? research.matchStatus
+      : undefined;
+  const summary = cleanText(research.summary, 700);
+  if (!requestedMatchStatus || !summary) return undefined;
+
+  const sources = (Array.isArray(research.sources) ? research.sources : [])
+    .slice(0, 3)
+    .map((source) => ({
+      title: cleanText(source?.title, 180),
+      url: cleanText(source?.url, 2_048)
+    }))
+    .filter((source) => source.title && isSafePublicHttpUrl(source.url));
+
+  // A browser can submit arbitrary JSON to the debrief route. Only a result
+  // backed by a visible public source is allowed to influence a draft.
+  const matchStatus = requestedMatchStatus === "confirmed" && !sources.length ? "ambiguous" : requestedMatchStatus;
+
+  return {
+    matchStatus,
+    summary,
+    sources,
+    researchedAt: cleanText(research.researchedAt, 80)
+  };
+}
+
+function isSafePublicHttpUrl(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    return !/^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[0-1])\.|0\.|169\.254\.)/i.test(url.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function cleanList(value: unknown, maxItems: number, maxItemLength: number) {

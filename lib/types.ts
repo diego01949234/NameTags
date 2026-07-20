@@ -142,6 +142,13 @@ export type ResearchChatResult = {
   sources?: ResearchSource[];
 };
 
+export type ContactPublicResearch = {
+  matchStatus: "confirmed" | "ambiguous" | "not_found";
+  summary: string;
+  sources: ResearchSource[];
+  researchedAt: string;
+};
+
 export type Contact = {
   id: string;
   eventId: string;
@@ -154,6 +161,8 @@ export type Contact = {
   followUpDraft?: string;
   followUpReason?: string;
   followUpWindow?: "today" | "within_48_hours" | "this_week";
+  /** User-triggered, source-linked public context. Private notes are never searched. */
+  publicResearch?: ContactPublicResearch;
   done?: boolean;
   consentedAt?: string;
   createdAt: string;
@@ -194,6 +203,11 @@ export type EventDebriefRequest = {
   event: Pick<Event, "id" | "name" | "goal" | "focus" | "networkingRole">;
   contacts: Contact[];
   notes: EventNote[];
+};
+
+export type ContactResearchRequest = {
+  event: Pick<Event, "name" | "goal">;
+  contact: Pick<Contact, "id" | "name" | "contact">;
 };
 
 export type EventDebriefResult = {

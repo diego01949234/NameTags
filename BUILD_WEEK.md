@@ -14,7 +14,7 @@ The Build Week version is intentionally a single end-to-end loop:
 2. Read the grounded room brief and ask follow-up questions about speakers, agenda, audience, and useful questions to ask.
 3. Select the public links that should travel with one event-specific QR card.
 4. Let a scanner deliberately save the card and opt in to share their own contact details and a conversation note.
-5. Turn the connection, private note, and promise into an editable follow-up with a visible `to send -> sent -> done` state.
+5. Optionally confirm an important contact's public professional context, then turn the connection, private note, and promise into an editable follow-up with a visible `to send -> sent -> done` state.
 
 ## What is new for Build Week
 
@@ -26,14 +26,16 @@ The Build Week version is intentionally a single end-to-end loop:
 - The same event ID connects research, owner link choices, the public room pass, scanner consent, and the follow-up queue. The server derives a scanner connection's event ID from the published room pass rather than trusting a browser-supplied value.
 - QR contact capture now requires explicit consent on the client **and** server, with a server-recorded consent timestamp.
 - The follow-up view prioritizes the next real action, shows recommended timing, lets the owner edit/copy a draft, mark it sent, and mark it done.
+- A per-contact public-context check makes follow-ups more relevant without turning private networking notes into search queries. It only uses the attendee-requested name, event context, and an optional public-profile URL; unconfirmed matches never influence a draft.
 
 ## Where GPT-5.6 is used
 
-The server-side OpenAI Responses API calls use `OPENAI_MODEL` (default `gpt-5.6-terra`) to generate:
+The server-side OpenAI Responses API uses `OPENAI_MODEL` (default `gpt-5.6-terra`) for the fast prep loop, and uses the higher-capability `OPENAI_RESEARCH_MODEL` / `OPENAI_FOLLOWUP_MODEL` (both default `gpt-5.6`) when a task needs public research or high-context follow-up synthesis:
 
 - event prep briefs and suggested link reasoning in [`app/api/generate/route.ts`](./app/api/generate/route.ts)
 - grounded follow-up research chat in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts)
 - prioritization and editable follow-up drafts in [`app/api/debrief/route.ts`](./app/api/debrief/route.ts)
+- source-linked public-context confirmation for one selected connection in [`app/api/contact-research/route.ts`](./app/api/contact-research/route.ts), followed by high-reasoning synthesis in the debrief route
 
 Short event-name/date searches use `OPENAI_RESEARCH_MODEL` (default `gpt-5.6`) with the Responses API `web_search` tool in [`app/api/brief/route.ts`](./app/api/brief/route.ts). These research calls default to `OPENAI_REASONING_EFFORT=high`: the model privately resolves the event identity, checks material facts against strong sources, and returns a compact sourced read rather than a chain-of-thought. Uploaded screenshots use `input_image` in [`app/api/event-image/route.ts`](./app/api/event-image/route.ts); a recognizable title then triggers the same live lookup. Factual chat questions use the same public-only lookup in [`app/api/research-chat/route.ts`](./app/api/research-chat/route.ts), then a separate model call uses the private profile only to tailor advice. Each web-backed answer stores up to three visible source links.
 
@@ -51,6 +53,7 @@ Codex was used in this repository to implement and iterate on the mobile-first a
 - Private notes, prep context, event research chat, and follow-up queues are never rendered on the public QR page.
 - QR card IDs are generated as opaque random IDs. Owner contact polling additionally requires a per-card sync key.
 - No message is sent automatically. The owner reviews and edits the draft, then deliberately copies/opens it and marks its status.
+- Public contact context is opt-in per person. The lookup never receives email, phone, private notes, or promises, and a no-source or ambiguous match cannot alter an AI draft.
 
 ## Required final validation
 
@@ -66,5 +69,5 @@ Record the actual result here after the test. Do not replace it with invented nu
 ## Deployment configuration
 
 - Supabase schema: run [`supabase/schema.sql`](./supabase/schema.sql) again after this update to add `contacts.consented_at` if it is not already present.
-- Vercel Production: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `OPENAI_API_KEY`. `OPENAI_RESEARCH_MODEL=gpt-5.6`, `OPENAI_VISION_MODEL=gpt-5.6`, and `OPENAI_REASONING_EFFORT=high` are optional because those are the quality-first defaults.
+- Vercel Production: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `OPENAI_API_KEY`. `OPENAI_RESEARCH_MODEL=gpt-5.6`, `OPENAI_FOLLOWUP_MODEL=gpt-5.6`, `OPENAI_VISION_MODEL=gpt-5.6`, and `OPENAI_REASONING_EFFORT=high` are optional because those are the quality-first defaults.
 - Supabase Auth: configure Site URL and Google OAuth before relying on the Google entry point. Email magic links remain available as the fallback.
