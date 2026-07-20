@@ -964,7 +964,6 @@ export function NametagApp() {
                     onNavigate={setView}
                   />
                   <DesktopResearchPanel
-                    card={activeCard}
                     event={activeEvent}
                     profile={state.profile}
                     role={activeEvent?.networkingRole ?? state.profile.networkingRole}
@@ -2050,21 +2049,41 @@ function describeResearchPersonalization(profile: UserProfile, role: NetworkingR
   return `Tailored to your ${roleLabel.toLowerCase()} lens. Add private background in Settings when you want more specific advice.`;
 }
 
-function buildResearchPrompts(brief: PrepBrief, role: NetworkingRole) {
+type ResearchStarter = {
+  title: string;
+  description: string;
+  prompt: string;
+};
+
+function buildResearchStarters(brief: PrepBrief, role: NetworkingRole): ResearchStarter[] {
   const roleLabel = getNetworkingRole(role).shortLabel.toLowerCase();
   const sourceTopic = brief.keyTopics[1] ?? brief.keyTopics[0] ?? "this event";
   const hasSourceFact = brief.roomSignals.some((signal) => signal.startsWith("Source:"));
-  const peoplePrompt = brief.speakerHighlights.length
-    ? "Which named speaker or host should I prioritize?"
-    : "What should I listen for in the room?";
-
   const roomPrompt = hasSourceFact
     ? `What does the source actually confirm about ${sourceTopic}?`
     : "What do we actually know about this event?";
 
-  return brief.speakerHighlights.length
-    ? [roomPrompt, peoplePrompt, `Give me three questions that are specific to ${sourceTopic}.`]
-    : [roomPrompt, `What should I focus on here as a ${roleLabel}?`, `Give me three questions that are specific to ${sourceTopic}.`];
+  return [
+    {
+      title: "Understand the room",
+      description: "What is this event actually about?",
+      prompt: roomPrompt
+    },
+    {
+      title: "Focus my time",
+      description: `What matters here for a ${roleLabel}?`,
+      prompt: `What should I focus on here as a ${roleLabel}?`
+    },
+    {
+      title: "Find a good question",
+      description: "Get three questions I can naturally ask.",
+      prompt: `Give me three questions that are specific to ${sourceTopic}.`
+    }
+  ];
+}
+
+function buildResearchPrompts(brief: PrepBrief, role: NetworkingRole) {
+  return buildResearchStarters(brief, role).map((starter) => starter.prompt);
 }
 
 function PrepScreen({
@@ -2653,15 +2672,20 @@ function BriefScreen({
   const roomSignals = brief.roomSignals ?? [];
   const sourceLabel = getResearchSourceLabel(event);
   const personalization = describeResearchPersonalization(profile, role);
+  const keyTopics = brief.keyTopics.slice(0, 3);
+  const nervousQuestions = brief.questionsToAsk.slice(0, 3);
 
   return (
     <div className="space-y-4 lg:space-y-5">
       <RoomStepper current="brief" onNavigate={onNavigate} />
       <div className="flex items-start justify-between gap-4">
         <div>
-          <MiniBadge tone="mint">Research</MiniBadge>
-          <h2 className="app-screen-title mt-3 text-ink">Understand this room.</h2>
-          <p className="app-info-copy mt-2 text-slate-600">{event?.name}</p>
+          <MiniBadge tone="mint">Event research</MiniBadge>
+          <h2 className="app-screen-title mt-3 text-ink">Make sense of this event.</h2>
+          <p className="mt-2 text-sm font-black text-slate-700">{event?.name}</p>
+          <p className="app-info-copy mt-1 text-slate-600">
+            Ask until you know what to listen for and how you want to join the room.
+          </p>
         </div>
         <MiniBadge tone="blue">{sourceLabel}</MiniBadge>
       </div>
@@ -2672,60 +2696,66 @@ function BriefScreen({
         </div>
       )}
 
-      <section className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
-        <div className="border-b border-line bg-wash px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="app-kicker text-cobalt">Your room read</div>
-            {event?.researchSourceUrl && (
-              <a
-                href={event.researchSourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-h-8 items-center gap-1.5 text-xs font-black text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
-              >
-                Source
-                <ArrowUpRight className="size-3.5" />
-              </a>
-            )}
-          </div>
-          <div className="mt-1 text-sm font-black text-ink">What the event material tells us</div>
+      <section className="rounded-xl border border-line bg-white p-4 shadow-sm">
+        <div className="flex items-center justify-between gap-3">
+          <div className="app-kicker text-cobalt">The short read</div>
+          {event?.researchSourceUrl && (
+            <a
+              href={event.researchSourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-8 items-center gap-1.5 text-xs font-black text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
+            >
+              Source
+              <ArrowUpRight className="size-3.5" />
+            </a>
+          )}
         </div>
-        <div className="space-y-3 p-4">
-          <p className="app-info-copy line-clamp-3 text-slate-700">{brief.eventSummary}</p>
-          <div className="flex items-start gap-2 rounded-lg border border-mint/20 bg-mint/10 px-3 py-2.5 text-xs font-semibold leading-5 text-teal-800">
-            <BadgeCheck className="mt-0.5 size-4 shrink-0" />
-            <span>{personalization}</span>
+        <p className="mt-2 app-info-copy line-clamp-3 text-slate-700">{brief.eventSummary}</p>
+        {keyTopics.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {keyTopics.map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
           </div>
-          <details className="rounded-lg border border-line bg-white px-3 py-2.5">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ink">
-              Show source details
-              <span className="text-xs font-semibold text-slate-soft">Brief summary</span>
-            </summary>
-            <div className="mt-3 space-y-3 border-t border-line pt-3">
-              <div>
-                <div className="app-kicker text-slate-soft">What is confirmed</div>
-                <ul className="mt-2 space-y-2">
-                  {roomSignals.length ? roomSignals.slice(0, 2).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The supplied event details are light, so NameTag keeps this research broad instead of inventing context.</CheckLine>}
-                </ul>
-              </div>
-              {brief.keyTopics.length > 0 && (
-                <div>
-                  <div className="app-kicker text-slate-soft">Topics in the source</div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {brief.keyTopics.slice(0, 4).map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
-                  </div>
-                </div>
-              )}
-            </div>
-          </details>
-          <p className="app-meta text-slate-soft">Need speakers, questions, or a next move? Ask below.</p>
-        </div>
+        )}
+        <details className="mt-3 border-t border-line pt-3">
+          <summary className="cursor-pointer text-xs font-black text-slate-600">What this answer is based on</summary>
+          <div className="mt-2 space-y-2 text-xs font-semibold leading-5 text-slate-600">
+            <p>{personalization}</p>
+            <ul className="space-y-1.5">
+              {roomSignals.length ? roomSignals.slice(0, 2).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The event details are light, so NameTag keeps the answer broad instead of making facts up.</CheckLine>}
+            </ul>
+          </div>
+        </details>
       </section>
 
       <ResearchChat key={`${card.id}-${role}`} card={card} event={event} profile={profile} role={role} brief={brief} updateCard={updateCard} />
 
+      <details className="rounded-lg border border-line bg-wash px-3 py-3">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+          <span>
+            <span className="block text-sm font-black text-ink">Feeling nervous?</span>
+            <span className="mt-0.5 block text-xs font-semibold text-slate-soft">Start with one easy question, not a memorized pitch.</span>
+          </span>
+          <MessageCircle className="size-4 shrink-0 text-coral" />
+        </summary>
+        <div className="mt-3 border-t border-line pt-3">
+          {nervousQuestions.length ? (
+            <ol className="space-y-2">
+              {nervousQuestions.map((question, index) => (
+                <li key={question} className="flex gap-2 rounded-md bg-white px-2.5 py-2 text-sm font-semibold leading-5 text-slate-700">
+                  <span className="font-badge-mono text-xs font-black text-coral">0{index + 1}</span>
+                  <span>{question}</span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm font-semibold leading-5 text-slate-600">Ask the research chat above for three low-pressure questions you can use.</p>
+          )}
+        </div>
+      </details>
+
       <PrimaryButton onClick={onContinue}>
-        Choose public links
+        I understand the room - choose QR links
         <ArrowRight className="size-4" />
       </PrimaryButton>
       <p className="-mt-2 text-center text-xs font-semibold leading-5 text-slate-soft">
@@ -2736,91 +2766,48 @@ function BriefScreen({
 }
 
 function DesktopResearchPanel({
-  card,
   event,
   profile,
   role
 }: {
-  card: NametagCard;
   event?: Event;
   profile: UserProfile;
   role: NetworkingRole;
 }) {
-  const brief = card.prepBrief;
-  const peopleMentioned = Array.from(new Set([...brief.speakerHighlights, ...brief.suggestedPeople]));
-  const hasPeopleSignal =
-    peopleMentioned.length > 0 &&
-    hasSpecificPeopleSignal(event?.researchContext ?? event?.urlOrDescription ?? "", peopleMentioned);
   const sourceLabel = getResearchSourceLabel(event);
   const personalization = describeResearchPersonalization(profile, role);
 
   return (
     <aside className="hidden lg:sticky lg:top-0 lg:block">
       <section className="overflow-hidden rounded-xl border border-line bg-white shadow-sm shadow-slate-900/[0.03]">
-        <div className="border-b border-line bg-[#fbfcfe] px-5 py-4">
-          <div className="app-kicker text-cobalt">Research context</div>
+        <div className="border-b border-line bg-wash px-5 py-4">
+          <div className="app-kicker text-cobalt">Answer context</div>
           <div className="mt-1 flex items-center justify-between gap-3">
-            <h3 className="app-section-title text-ink">What this answer is based on.</h3>
+            <h3 className="app-section-title text-ink">What NameTag is using.</h3>
             <MiniBadge tone="blue">{sourceLabel}</MiniBadge>
           </div>
         </div>
 
         <div className="space-y-4 p-5">
-          <section>
-            <div className="app-kicker text-slate-soft">Source</div>
-            <p className="app-info-copy mt-1.5 text-slate-700">
-              NameTag uses the event material you provided. It labels missing facts instead of filling them in.
-            </p>
-            {event?.researchSourceUrl && (
-              <a
-                href={event.researchSourceUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="app-meta mt-2 inline-flex min-h-8 items-center gap-1.5 text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
-              >
-                View event source
-                <ArrowUpRight className="size-3.5" />
-              </a>
-            )}
-          </section>
-
-          <section className="border-t border-line pt-4">
-            <div className="app-kicker text-slate-soft">Personalization</div>
+          <p className="app-info-copy text-slate-700">
+            Answers use the event material you provided. When the source is thin, NameTag says so instead of guessing.
+          </p>
+          <div className="border-t border-line pt-4">
+            <div className="app-kicker text-slate-soft">Tailored to you</div>
             <p className="app-info-copy mt-1.5 text-slate-700">{personalization}</p>
-          </section>
-
-          <details className="border-t border-line pt-4">
-            <summary className="cursor-pointer text-sm font-black text-ink">Source details</summary>
-            <div className="mt-3 space-y-4">
-              <div>
-                <div className="app-kicker text-slate-soft">Signals</div>
-                <ul className="mt-2 space-y-2">
-                  {(brief.roomSignals ?? []).slice(0, 3).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>)}
-                  {!brief.roomSignals?.length && <CheckLine>The room details are light, so this plan stays broad instead of inventing context.</CheckLine>}
-                </ul>
-              </div>
-              {brief.keyTopics.length > 0 && (
-                <div>
-                  <div className="app-kicker text-slate-soft">Topics</div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {brief.keyTopics.slice(0, 5).map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
-                  </div>
-                </div>
-              )}
-              <div>
-                <div className="app-kicker text-slate-soft">{hasPeopleSignal ? "People named in the source" : "Mingle plan"}</div>
-                {hasPeopleSignal ? (
-                  <ul className="mt-2 space-y-2">
-                    {peopleMentioned.slice(0, 4).map((person) => <CheckLine key={person}>{person}</CheckLine>)}
-                  </ul>
-                ) : (
-                  <p className="app-info-copy mt-1.5 text-slate-600">No named speaker list was provided. Ask one useful question instead of assuming who is in the room.</p>
-                )}
-              </div>
-            </div>
-          </details>
+          </div>
+          {event?.researchSourceUrl && (
+            <a
+              href={event.researchSourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="app-meta inline-flex min-h-8 items-center gap-1.5 text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
+            >
+              View event source
+              <ArrowUpRight className="size-3.5" />
+            </a>
+          )}
         </div>
-
       </section>
     </aside>
   );
@@ -2847,6 +2834,7 @@ function ResearchChat({
   const [answerMode, setAnswerMode] = useState<"GPT-5.6" | "Prepared fallback" | null>(null);
   const messages = card.researchMessages ?? [];
   const sourceLabel = getResearchSourceLabel(event);
+  const starterOptions = buildResearchStarters(brief, role);
 
   async function askResearchQuestion(value: string) {
     const content = value.trim();
@@ -2924,26 +2912,43 @@ function ResearchChat({
   }
 
   return (
-    <section className="overflow-hidden rounded-xl border-2 border-ink bg-white shadow-sm shadow-slate-900/[0.06]">
-      <div className="flex items-start gap-3 bg-ink px-4 py-4 text-white">
-        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-mint text-ink">
+    <section className="overflow-hidden rounded-xl border border-ink bg-white shadow-[0_12px_30px_rgb(24_34_53_/_0.1)]">
+      <div className="flex items-start gap-3 border-b border-ink bg-ink px-4 py-4 text-white">
+        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-coral text-white">
           <MessageCircle className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-sm font-black">Ask until the room makes sense.</div>
+            <div className="text-sm font-black">Ask about this event</div>
             {answerMode && <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-black text-white/75">{answerMode}</span>}
           </div>
           <p className="mt-1 text-xs font-semibold leading-5 text-white/70">
-            Grounded in {sourceLabel.toLowerCase()}. Advice uses any background you choose to save; missing facts stay explicit.
+            Grounded in {sourceLabel.toLowerCase()}. Continue asking until it feels clear.
           </p>
         </div>
       </div>
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-4 p-4">
         {messages.length === 0 && (
-          <div className="rounded-lg bg-wash px-3 py-2.5 text-xs font-semibold leading-5 text-slate-700">
-            Start with what you need to understand, then ask for questions you can use in the room. NameTag will not pretend the source gave it facts it did not.
+          <div>
+            <p className="text-sm font-black text-ink">Start with one direction</p>
+            <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+              Pick what you need most right now, then keep asking in your own words.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {starterOptions.map((starter) => (
+                <button
+                  key={starter.title}
+                  type="button"
+                  disabled={isThinking}
+                  onClick={() => void askResearchQuestion(starter.prompt)}
+                  className="min-h-[76px] rounded-lg border border-line bg-wash p-3 text-left transition hover:border-cobalt hover:bg-cobalt/5 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span className="block text-sm font-black text-ink">{starter.title}</span>
+                  <span className="mt-1 block text-xs font-semibold leading-5 text-slate-600">{starter.description}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -2969,7 +2974,7 @@ function ResearchChat({
             className={`${inputClass} min-h-11 flex-1 resize-none py-2.5`}
             value={question}
             onChange={(eventChange) => setQuestion(eventChange.target.value)}
-            placeholder="What do you want to understand before you walk in?"
+            placeholder="Ask a follow-up about this event..."
             aria-label="Ask NameTag about this event"
             rows={1}
             maxLength={600}
@@ -2984,8 +2989,9 @@ function ResearchChat({
           </button>
         </form>
 
+        {messages.length > 0 && (
         <div>
-          <div className="mb-2 app-kicker text-slate-soft">Try one</div>
+          <div className="mb-2 app-kicker text-slate-soft">Keep exploring</div>
           <div className="flex flex-wrap gap-2">
             {suggestedQuestions.map((suggestion) => (
               <button
@@ -3000,6 +3006,7 @@ function ResearchChat({
             ))}
           </div>
         </div>
+        )}
       </div>
     </section>
   );
@@ -3270,32 +3277,6 @@ function shownReason(card: NametagCard, link: UserLink, event: Event | undefined
   return `It supports your goal to ${goal} in this room.`;
 }
 
-function hasSpecificPeopleSignal(eventText: string, speakerHighlights: string[]) {
-  const source = [eventText, ...speakerHighlights].join(" ");
-  const possibleNames = source.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2}\b/g) ?? [];
-  const nonPersonWords = [
-    "Build",
-    "Week",
-    "Career",
-    "Fair",
-    "Product",
-    "Developer",
-    "Design",
-    "Open",
-    "Taipei",
-    "NameTag",
-    "LinkedIn",
-    "GitHub",
-    "Devpost",
-    "Codex"
-  ];
-
-  return possibleNames.some((candidate) => {
-    const words = candidate.split(/\s+/);
-    return words.length >= 2 && !words.some((word) => nonPersonWords.includes(word));
-  });
-}
-
 function organizeSeminarNotes(notes: EventNote[]) {
   const bodies = notes.map((note) => note.body.toLowerCase());
   const mentionsMemory = bodies.some((body) => body.includes("memory"));
@@ -3402,6 +3383,7 @@ function DebriefScreen({
   const [personPriority, setPersonPriority] = useState<Contact["priority"]>("medium");
   const [isOrganizing, setIsOrganizing] = useState(false);
   const [organizeError, setOrganizeError] = useState("");
+  const [copiedFollowUpId, setCopiedFollowUpId] = useState("");
   const contacts = state.contacts.filter((contact) => contact.eventId === card.eventId);
   const eventNotes = (state.eventNotes ?? []).filter((note) => note.eventId === card.eventId);
   const statusFor = (contact: Contact): FollowUp["status"] =>
@@ -3409,7 +3391,9 @@ function DebriefScreen({
     (contact.done ? "done" : "to_send");
   const nextFollowUp =
     contacts.find((contact) => statusFor(contact) === "to_send" && contact.priority === "high") ??
-    contacts.find((contact) => statusFor(contact) === "to_send");
+    contacts.find((contact) => statusFor(contact) === "to_send") ??
+    contacts.find((contact) => statusFor(contact) === "sent");
+  const nextFollowUpStatus = nextFollowUp ? statusFor(nextFollowUp) : undefined;
   const counts = {
     high: contacts.filter((contact) => contact.priority === "high").length,
     medium: contacts.filter((contact) => contact.priority === "medium").length,
@@ -3578,91 +3562,87 @@ function DebriefScreen({
       state.followUps.find((followUp) => followUp.contactId === contact.id)?.message ??
       buildFollowUpDraft(contact, event?.name ?? "the event");
     await navigator.clipboard?.writeText(draft).catch(() => undefined);
+    setCopiedFollowUpId(contact.id);
   }
 
   return (
-    <div className="space-y-4 lg:max-w-[1120px] lg:space-y-5">
-      <RoomStepper current="debrief" onNavigate={onNavigate} />
-      <EventContextStrip event={event} stage="follow-up" />
-      <div>
+    <div className="flex flex-col gap-4 lg:max-w-[1120px] lg:gap-5">
+      <div className="order-1"><RoomStepper current="debrief" onNavigate={onNavigate} /></div>
+      <div className="order-2"><EventContextStrip event={event} stage="follow-up" /></div>
+      <div className="order-3">
         <MiniBadge tone="mint">After the room</MiniBadge>
-        <h2 className="app-screen-title mt-3 text-ink">Your follow-up queue.</h2>
+        <h2 className="app-screen-title mt-3 text-ink">Turn each conversation into one next step.</h2>
         <p className="app-info-copy mt-2 text-slate-600">
-          Review the context, edit or copy the draft, send it where you normally message, then mark it sent or done. NameTag never sends a message for you.
+          Add what you remember, let NameTag make an editable draft, then copy it into the channel you already use. You stay in control of sending.
         </p>
       </div>
 
-      <section aria-labelledby="follow-up-how-it-works" className="border-y border-line py-3">
-        <div id="follow-up-how-it-works" className="app-kicker text-cobalt">Follow-up in three moves</div>
-        <ol className="mt-2 grid grid-cols-3 gap-2">
-          <li className="min-w-0">
-            <span className="font-badge-mono text-[10px] font-black text-coral">01</span>
-            <div className="mt-1 text-xs font-black text-ink">Capture</div>
-            <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">Name, context, promise.</p>
-          </li>
-          <li className="min-w-0 border-l border-line pl-2">
-            <span className="font-badge-mono text-[10px] font-black text-cobalt">02</span>
-            <div className="mt-1 text-xs font-black text-ink">Send</div>
-            <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">Edit or copy the draft.</p>
-          </li>
-          <li className="min-w-0 border-l border-line pl-2">
-            <span className="font-badge-mono text-[10px] font-black text-teal-800">03</span>
-            <div className="mt-1 text-xs font-black text-ink">Close</div>
-            <p className="mt-0.5 text-[11px] font-semibold leading-4 text-slate-soft">Mark sent, then done.</p>
-          </li>
-        </ol>
+      <section aria-labelledby="follow-up-how-it-works" className="order-4 rounded-lg border border-line bg-wash px-3 py-3">
+        <div id="follow-up-how-it-works" className="app-kicker text-cobalt">Three simple moves</div>
+        <p className="mt-1 text-xs font-semibold leading-5 text-slate-600">
+          <span className="font-black text-ink">1. Capture</span> who you met. <span className="font-black text-ink">2. Copy</span> the draft you want to send. <span className="font-black text-ink">3. Close</span> it when the next step is done.
+        </p>
       </section>
 
       {nextFollowUp ? (
-        <section className="overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm">
+        <section className="order-5 overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm">
           <div className="flex items-center justify-between gap-3 border-b border-white/10 px-3 py-2">
             <div className="app-kicker text-coral">
-              Your next real step
+              {nextFollowUpStatus === "sent" ? "Close the loop" : "Your next real step"}
             </div>
             <MiniBadge tone="coral">{nextFollowUp.priority} priority</MiniBadge>
           </div>
           <div className="p-3">
             <div className="app-section-title">Follow up with {nextFollowUp.name}</div>
             <p className="app-meta mt-1 text-white/65 line-clamp-2">{nextFollowUp.note}</p>
-            <p className="app-kicker mt-2 text-mint">
-              {followUpWindowLabel(nextFollowUp.followUpWindow)}
-            </p>
+            {nextFollowUpStatus === "to_send" && (
+              <p className="app-kicker mt-2 text-mint">
+                {followUpWindowLabel(nextFollowUp.followUpWindow)}
+              </p>
+            )}
             {nextFollowUp.followUpReason && (
               <p className="app-meta mt-2 border-l-2 border-mint pl-2 text-mint">
                 {nextFollowUp.followUpReason}
               </p>
+            )}
+            {nextFollowUpStatus === "sent" && (
+              <p className="mt-3 text-xs font-semibold leading-5 text-white/70">This message is already marked sent. Close it once the promised next step is complete.</p>
             )}
             <button
               type="button"
               onClick={() => void copyFollowUp(nextFollowUp)}
               className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-coral px-3 text-sm font-black text-white"
             >
-              Copy draft to send
+              {nextFollowUpStatus === "sent"
+                ? "Copy draft again"
+                : copiedFollowUpId === nextFollowUp.id
+                  ? "Copied - paste it to send"
+                  : "Copy draft"}
               <Copy className="size-4" />
             </button>
             <button
               type="button"
-              onClick={() => setFollowUpStatus(nextFollowUp.id, "sent")}
+              onClick={() => setFollowUpStatus(nextFollowUp.id, nextFollowUpStatus === "sent" ? "done" : "sent")}
               className="mt-2 inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-white/20 px-3 text-sm font-black text-white/85 transition hover:bg-white/10"
             >
-              Mark as sent
+              {nextFollowUpStatus === "sent" ? "Mark follow-up done" : "Mark as sent"}
             </button>
           </div>
         </section>
       ) : (
-        <section className="rounded-lg border border-mint/25 bg-mint/10 p-3">
-          <div className="app-section-title text-teal-800">Your to-send queue is clear.</div>
+        <section className="order-5 rounded-lg border border-mint/25 bg-mint/10 p-3">
+          <div className="app-section-title text-teal-800">No open follow-ups right now.</div>
           <p className="app-meta mt-1 text-teal-800/75">
-            Add someone below, or new people who connect through the QR will appear here automatically.
+            Add someone you met below, or new people who opt in through the QR will appear here automatically.
           </p>
         </section>
       )}
 
-      <details className="overflow-hidden rounded-lg border border-cobalt/25 bg-cobalt/5 shadow-sm">
+      <details className="order-8 overflow-hidden rounded-lg border border-cobalt/25 bg-cobalt/5 shadow-sm">
         <summary className="flex cursor-pointer list-none items-start justify-between gap-3 border-b border-cobalt/15 bg-white px-3 py-3">
           <div>
-            <div className="app-kicker text-cobalt">AI event debrief</div>
-            <div className="app-section-title mt-1 text-ink">Organize the rest when you are ready.</div>
+            <div className="app-kicker text-cobalt">AI follow-up plan</div>
+            <div className="app-section-title mt-1 text-ink">Let AI prioritize people and shape drafts.</div>
           </div>
           <BadgeCheck className="mt-0.5 size-5 shrink-0 text-cobalt" />
         </summary>
@@ -3699,7 +3679,7 @@ function DebriefScreen({
         </div>
       </details>
 
-      <details className="rounded-lg border border-line bg-white px-3 py-2.5">
+      <details className="order-9 rounded-lg border border-line bg-white px-3 py-2.5">
         <summary className="cursor-pointer text-sm font-black text-ink">Event details</summary>
         <div className="mt-3 grid grid-cols-2 gap-2 border-t border-line pt-3 lg:grid-cols-4 lg:gap-3">
           <Metric label="People met" value={contacts.length} icon={UsersRound} />
@@ -3709,17 +3689,17 @@ function DebriefScreen({
         </div>
       </details>
 
-      <details open={!contacts.length} className="rounded-lg border border-line bg-white p-3 shadow-sm">
+      <details open={!contacts.length} className="order-7 rounded-lg border border-line bg-white p-3 shadow-sm">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
           <span>
-            <span className="block text-sm font-black text-ink">Add someone manually</span>
+            <span className="block text-sm font-black text-ink">Add a person</span>
             <span className="mt-0.5 block text-xs font-semibold text-slate-soft">For a paper card, introduction, or someone who did not scan.</span>
           </span>
           <Plus className="size-4 shrink-0 text-cobalt" />
         </summary>
         <form onSubmit={submitManualContact} className="mt-4 space-y-3 border-t border-line pt-4">
           <p className="-mt-1 text-xs font-semibold leading-5 text-slate-soft">
-            Add only what you remember. NameTag will turn it into an editable first follow-up.
+            Only their name is required. Add any context you remember and NameTag will make an editable first draft.
           </p>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Name">
@@ -3748,35 +3728,38 @@ function DebriefScreen({
               placeholder="They are testing the same problem and asked to see the prototype."
             />
           </Field>
-          <div className="grid grid-cols-[1fr_118px] gap-2">
-            <Field label="Promise or next step (optional)">
-              <input
-                className={inputClass}
-                value={personPromise}
-                onChange={(eventChange) => setPersonPromise(eventChange.target.value)}
-                placeholder="Send the prototype link"
-              />
-            </Field>
-            <Field label="Priority">
-              <select
-                className={inputClass}
-                value={personPriority}
-                onChange={(eventChange) => setPersonPriority(eventChange.target.value as Contact["priority"])}
-              >
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </Field>
-          </div>
+          <details className="rounded-md border border-line bg-wash px-2.5 py-2">
+            <summary className="cursor-pointer text-xs font-black text-ink">Add a promise or priority (optional)</summary>
+            <div className="mt-3 grid grid-cols-[1fr_118px] gap-2">
+              <Field label="Promise or next step">
+                <input
+                  className={inputClass}
+                  value={personPromise}
+                  onChange={(eventChange) => setPersonPromise(eventChange.target.value)}
+                  placeholder="Send the prototype link"
+                />
+              </Field>
+              <Field label="Priority">
+                <select
+                  className={inputClass}
+                  value={personPriority}
+                  onChange={(eventChange) => setPersonPriority(eventChange.target.value as Contact["priority"])}
+                >
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </Field>
+            </div>
+          </details>
           <PrimaryButton type="submit">
             <Plus className="size-4" />
-            Add to follow-up queue
+            Add person and make a draft
           </PrimaryButton>
         </form>
       </details>
 
-      <details className="rounded-lg border border-line bg-white p-3">
+      <details className="order-10 rounded-lg border border-line bg-white p-3">
         <summary className="cursor-pointer text-sm font-black text-ink">Priority overview</summary>
         <div className="mt-3 grid grid-cols-3 gap-2 border-t border-line pt-3">
           <PriorityPill label="High" count={counts.high} tone="coral" />
@@ -3785,7 +3768,7 @@ function DebriefScreen({
         </div>
       </details>
 
-      <details className="rounded-lg border border-line bg-white p-3">
+      <details className="order-11 rounded-lg border border-line bg-white p-3">
         <summary className="cursor-pointer text-sm font-black text-ink">Private notes</summary>
         <div className="mt-3 border-t border-line pt-3">
         {eventNotes.length === 0 ? (
@@ -3827,12 +3810,12 @@ function DebriefScreen({
         </div>
       </details>
 
-      <section className="space-y-2">
-        <SectionTitle icon={UsersRound} title="Follow-up queue" />
+      <section id="follow-up-queue" className="order-6 space-y-2">
+        <SectionTitle icon={UsersRound} title="Your queue" />
         {contacts.length === 0 ? (
           <EmptyState
             title="No follow-ups yet"
-            body="Add someone you met above, or let a scanner opt in through your public card."
+            body="Add someone you met below, or let a scanner opt in through your public card."
           />
         ) : (
           contacts.map((contact) => {
@@ -3877,18 +3860,9 @@ function DebriefScreen({
                 <div className="mt-3 rounded-lg border border-line bg-white p-2">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-xs font-black text-ink">Follow-up draft</span>
-                    <select
-                      className="rounded-md border border-line bg-white px-2 py-1 text-xs font-black text-ink outline-none focus:border-cobalt"
-                      value={status}
-                      onChange={(eventChange) =>
-                        setFollowUpStatus(contact.id, eventChange.target.value as FollowUp["status"])
-                      }
-                      aria-label={`Follow-up status for ${contact.name}`}
-                    >
-                      <option value="to_send">To send</option>
-                      <option value="sent">Sent</option>
-                      <option value="done">Done</option>
-                    </select>
+                    <MiniBadge tone={status === "to_send" ? "coral" : status === "sent" ? "blue" : "mint"}>
+                      {status === "to_send" ? "To send" : status === "sent" ? "Sent" : "Done"}
+                    </MiniBadge>
                   </div>
                   <p className="text-xs leading-5 text-slate-600">{draft}</p>
                   <details className="mt-2 rounded-md border border-line bg-wash p-2">
@@ -3900,21 +3874,39 @@ function DebriefScreen({
                       aria-label={`Edit follow-up draft for ${contact.name}`}
                     />
                   </details>
-                  <button
-                    type="button"
-                    onClick={() => void copyFollowUp(contact)}
-                    className="mt-3 w-full rounded-lg bg-cobalt px-3 py-2 text-sm font-black text-white"
-                  >
-                    Copy draft
-                  </button>
-                  {status === "sent" && (
-                    <button
-                      type="button"
-                      onClick={() => setFollowUpStatus(contact.id, "done")}
-                      className="mt-2 w-full rounded-lg border border-mint/35 bg-mint/10 px-3 py-2 text-sm font-black text-teal-800 transition hover:bg-mint/20"
-                    >
-                      Mark follow-up done
-                    </button>
+                  {status === "to_send" ? (
+                    <>
+                      <p className="mt-3 text-xs font-semibold leading-5 text-slate-600">Review the draft, copy it into your usual channel, then mark it sent.</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void copyFollowUp(contact)}
+                          className="rounded-lg bg-cobalt px-3 py-2 text-sm font-black text-white"
+                        >
+                          {copiedFollowUpId === contact.id ? "Copied" : "Copy draft"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFollowUpStatus(contact.id, "sent")}
+                          className="rounded-lg border border-line bg-white px-3 py-2 text-sm font-black text-ink transition hover:border-ink hover:bg-wash"
+                        >
+                          Mark sent
+                        </button>
+                      </div>
+                    </>
+                  ) : status === "sent" ? (
+                    <>
+                      <p className="mt-3 text-xs font-semibold leading-5 text-slate-600">This is marked sent. Close it when the promised next step is complete.</p>
+                      <button
+                        type="button"
+                        onClick={() => setFollowUpStatus(contact.id, "done")}
+                        className="mt-3 w-full rounded-lg border border-mint/35 bg-mint/10 px-3 py-2 text-sm font-black text-teal-800 transition hover:bg-mint/20"
+                      >
+                        Mark follow-up done
+                      </button>
+                    </>
+                  ) : (
+                    <p className="mt-3 rounded-md bg-mint/10 px-2.5 py-2 text-xs font-black text-teal-800">Follow-up complete.</p>
                   )}
                 </div>
               </div>
