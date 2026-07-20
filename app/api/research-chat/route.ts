@@ -65,6 +65,13 @@ async function answerWithOpenAI(
   };
   const source = (payload.event.researchContext || payload.event.urlOrDescription).slice(0, 7000);
   const history = payload.history.slice(-6);
+  const systemPrompt = [
+    "You are NameTag's event research copilot. Answer one attendee follow-up question using only the supplied event source, generated brief, stated goal, and private profile context.",
+    "Start with a direct answer to what the attendee asked. Then, where helpful, use short labeled sections such as 'What the source confirms:' and 'Next move:'. Use short bullets when giving questions or options.",
+    "Be specific and tailored: the private networkingRole and privateContext should change which decision, question, or next action you recommend. Do not repeat private details unless the attendee explicitly asks about their own preparation.",
+    "Do not invent speakers, attendees, companies, agenda details, or web research. Only call someone a speaker or organizer when the source explicitly says so. When the source does not contain a requested fact, lead with 'Missing:' and say that plainly, then give a useful question the attendee can ask in person.",
+    "Do not use generic networking coaching or manufacture a pitch unless the attendee asks for one. Never imply you browsed beyond the supplied source. Return only JSON matching the schema."
+  ].join(" ");
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -77,8 +84,7 @@ async function answerWithOpenAI(
       input: [
         {
           role: "system",
-          content:
-            "You are NameTag's fast event research copilot. Answer the attendee's follow-up question using only the supplied event source, generated brief, stated goal, and private profile context. Be concise, useful, concrete, and tailored. Adapt advice to the private networkingRole and privateContext: student means low-pressure, curiosity-led language; builder means concrete proof and feedback; career means professional evidence and role-relevant questions; community means relationship-first language; exploring means a simple next move. Do not invent speakers, attendees, companies, agenda details, or web research. Only call a person a speaker or organizer when the source explicitly says so. When the source does not contain the requested fact, say that plainly, then give the attendee a useful next action or question to ask in person. The user's organization, school, interests, and privateContext are private background; do not repeat them unless the user directly asks about their own preparation. Never imply you browsed beyond the supplied source. Return only JSON matching the schema."
+          content: systemPrompt
         },
         {
           role: "user",
@@ -135,46 +141,51 @@ async function answerWithOpenAI(
 
 function mockResearchAnswer(payload: ResearchChatRequest, question: string): ResearchChatResult {
   const lowerQuestion = question.toLowerCase();
-  const source = payload.event.researchContext || payload.event.urlOrDescription;
   const speakerNames = payload.brief.speakerHighlights ?? [];
-  const hasSpecificSource = source.trim().length > 80;
+  const hasSpecificSource = (payload.brief.roomSignals ?? []).some((signal) => signal.startsWith("Source:"));
   const topic = payload.brief.keyTopics[0] ?? "the event's main topic";
   const secondaryTopic = payload.brief.keyTopics[1] ?? topic;
   const role = payload.profile.networkingRole;
-  const hasPrivateContext = Boolean(payload.profile.privateContext.trim());
-  const privateTailoring = hasPrivateContext
-    ? " I have also used the private background you saved to make the suggestions more relevant to you."
-    : ` I am tailoring this to your ${role} mode; you can add a LinkedIn About or CV snippet in Settings for more context.`;
+  const roleNextMove: Record<typeof role, string> = {
+    student: "Keep it curiosity-led and low-pressure: one good question is enough.",
+    builder: "Prioritize concrete examples and feedback over a broad explanation.",
+    career: "Listen for what strong evidence looks like before sharing your own materials.",
+    community: "Start with their process and context before asking for a connection.",
+    exploring: "Use the answer to choose one clear person or question to prioritize."
+  };
   let answer = "";
 
   if (lowerQuestion.includes("ask") || lowerQuestion.includes("question")) {
     answer =
-      `Try one of these, then follow the answer instead of moving to the next question:\n\n1. “What part of ${topic} are you most focused on right now?”\n2. “What brought you to this event rather than another ${secondaryTopic} room?”\n3. “What kind of feedback, introduction, or resource would actually help after today?”${privateTailoring}`;
+      `Try one, then follow the answer instead of moving to the next question:\n\n- “What part of ${topic} are you most focused on right now?”\n- “What brought you to this event rather than another ${secondaryTopic} room?”\n- “What kind of feedback, introduction, or resource would actually help after today?”\n\nNext move: ${roleNextMove[role]}`;
   } else if (lowerQuestion.includes("speaker") || lowerQuestion.includes("organizer") || lowerQuestion.includes("who")) {
     answer = speakerNames.length
-      ? "The event source explicitly mentions: " +
-        speakerNames.map((speaker) => speaker.replace(/[.]+$/, "")).join("; ") +
-        ". Pick one person whose stated topic overlaps with your goal, and ask about the work they are already named for."
-      : "I do not have a source-confirmed speaker or organizer list for this event. Ask an organizer, “Who should I make sure I hear from today, and what are they working on?” That gets you useful context without pretending the page gave us names.";
+      ? "What the source confirms:\n" +
+        speakerNames.map((speaker) => `- ${speaker.replace(/[.]+$/, "")}`).join("\n") +
+        "\n\nNext move: pick one person whose stated topic overlaps with your goal, then ask about the work they are already named for."
+      : "Missing: I do not have a source-confirmed speaker or organizer list for this event.\n\nAsk an organizer: “Who should I make sure I hear from today, and what are they working on?” That gets you useful context without pretending the page gave us names.";
   } else if (lowerQuestion.includes("intro") || lowerQuestion.includes("introduce") || lowerQuestion.includes("pitch")) {
-    answer = "A short optional introduction for this room is: " + payload.brief.intro + " Then ask what they are working on. Keep the longer story for when they ask a follow-up." + privateTailoring;
+    answer = "A short optional introduction for this room is:\n\n“" + payload.brief.intro + "”\n\nThen ask what they are working on. Keep the longer story for when they ask a follow-up.";
   } else if (lowerQuestion.includes("priority") || lowerQuestion.includes("first") || lowerQuestion.includes("meet")) {
     answer =
       "Prioritize " +
       (payload.brief.peopleToMeet?.[0]?.toLowerCase() ?? "people closest to the problem you are exploring") +
-      ". Your first aim is one useful conversation with a clear next step, not the maximum number of introductions." + privateTailoring;
+      ". Your first aim is one useful conversation with a clear next step, not the maximum number of introductions.\n\nNext move: " +
+      roleNextMove[role];
   } else if (
     lowerQuestion.includes("about") ||
     lowerQuestion.includes("understand") ||
     lowerQuestion.includes("what is") ||
     lowerQuestion.includes("what's")
   ) {
-    answer = `${payload.brief.eventSummary}\n\nThe clearest signals are: ${(payload.brief.roomSignals ?? []).slice(0, 3).join("; ") || "the source has limited detail"}. Start by recognizing ${topic}, then use a specific question to learn what matters to the people in the room.${privateTailoring}`;
+    answer = `What the source confirms:\n${payload.brief.eventSummary}\n\nKey signals:\n${
+      (payload.brief.roomSignals ?? []).slice(0, 3).map((signal) => `- ${signal}`).join("\n") || "- Missing: the source has limited detail."
+    }\n\nNext move: ask one specific question about ${topic}, then use the answer to learn what matters to the people in the room.`;
   } else {
     answer =
       hasSpecificSource
-        ? `The event material points to ${topic}. I would begin by asking one specific question about that, then use the answer to decide whether this person is worth following up with.${privateTailoring}`
-        : "The supplied event information is still light, so I would not assume details that are not there. I can still help you prepare a question about the room, decide what detail to ask an organizer for, or turn a source-confirmed topic into a useful conversation." + privateTailoring;
+        ? `What the source confirms:\n${payload.brief.eventSummary}\n\nNext move: ask one specific question about ${topic}, then use the answer to decide whether this person is worth following up with. ${roleNextMove[role]}`
+        : "Missing: the supplied event information is still light, so I would not assume details that are not there. I can still help you prepare a question about the room, decide what detail to ask an organizer for, or turn a source-confirmed topic into a useful conversation.";
   }
 
   return {

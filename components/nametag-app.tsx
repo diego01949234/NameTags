@@ -65,6 +65,7 @@ import type {
   NametagCard,
   NametagState,
   NetworkingRole,
+  PrepBrief,
   PublicCard,
   ResearchChatResult,
   ResearchMessage,
@@ -905,6 +906,8 @@ export function NametagApp() {
                   <DesktopResearchPanel
                     card={activeCard}
                     event={activeEvent}
+                    profile={state.profile}
+                    role={activeEvent?.networkingRole ?? state.profile.networkingRole}
                   />
                 </div>
               )}
@@ -946,7 +949,7 @@ export function NametagApp() {
                   <AppBottomNav
                     view={view}
                     onOpenEvents={() => setView("home")}
-                    onPrepareEvent={startNewEvent}
+                    onOpenResearch={() => activeCard ? setView("brief") : startNewEvent()}
                     onOpenSettings={() => setView("vault")}
                   />
                 </div>
@@ -1107,8 +1110,8 @@ function DesktopTopbar({
   const labels: Record<View, { title: string; eyebrow: string }> = {
     home: { title: "Your events", eyebrow: "Workspace" },
     vault: { title: "Profile and links", eyebrow: "Settings" },
-    prep: { title: "Research an event", eyebrow: "Before the room" },
-    brief: { title: "Research the room", eyebrow: "Event plan" },
+    prep: { title: "Research an event", eyebrow: "New room" },
+    brief: { title: "Research", eyebrow: "Current event" },
     card: { title: "Review your public card", eyebrow: "Your NameTag" },
     share: { title: "Show your QR", eyebrow: "During the room" },
     debrief: { title: "Follow through", eyebrow: "After the room" }
@@ -1183,8 +1186,8 @@ function DesktopSidebar({
     active: boolean;
     onClick: () => void;
   }> = [
+    { label: "Research", icon: BookOpenText, active: view === "brief" || view === "prep", onClick: onResearch },
     { label: "Events", icon: CalendarDays, active: view === "home", onClick: onOpenEvents },
-    { label: "Research", icon: BookOpenText, active: view === "brief", onClick: onResearch },
     { label: "My QR", icon: QrCode, active: view === "card" || view === "share", onClick: onShowCard },
     { label: "Follow-up", icon: ListChecks, active: view === "debrief", onClick: onFollowUp },
     { label: "Settings", icon: Settings2, active: view === "vault", onClick: onOpenSettings }
@@ -1396,16 +1399,16 @@ function AppMenu({
 function AppBottomNav({
   view,
   onOpenEvents,
-  onPrepareEvent,
+  onOpenResearch,
   onOpenSettings
 }: {
   view: View;
   onOpenEvents: () => void;
-  onPrepareEvent: () => void;
+  onOpenResearch: () => void;
   onOpenSettings: () => void;
 }) {
-  const eventsActive = view !== "vault" && view !== "prep";
-  const prepareActive = view === "prep";
+  const eventsActive = view === "home" || view === "card" || view === "share" || view === "debrief";
+  const researchActive = view === "prep" || view === "brief";
   const settingsActive = view === "vault";
 
   return (
@@ -1419,10 +1422,10 @@ function AppBottomNav({
         />
         <button
           type="button"
-          onClick={onPrepareEvent}
-          aria-current={prepareActive ? "page" : undefined}
+          onClick={onOpenResearch}
+          aria-current={researchActive ? "page" : undefined}
           className={`inline-flex min-h-12 flex-col items-center justify-center gap-1 rounded-lg border px-3 text-[10px] font-black transition ${
-            prepareActive
+            researchActive
               ? "border-cobalt bg-cobalt text-white"
               : "border-cobalt bg-cobalt text-white shadow-sm shadow-cobalt/25 hover:bg-ink hover:border-ink"
           }`}
@@ -1782,9 +1785,9 @@ function CompactEventSummary({
   selectCard: (cardId: string, nextView?: View) => void;
   startNewEvent: () => void;
 }) {
-  const primaryView: View = pendingCount > 0 ? "debrief" : "brief";
+  const primaryView: View = "brief";
   const activityLabel = pendingCount > 0
-    ? `${pendingCount} follow-up${pendingCount === 1 ? "" : "s"} to send`
+    ? `${pendingCount} follow-up${pendingCount === 1 ? "" : "s"} waiting after your research`
     : contactsCount > 0
       ? `${contactsCount} connection${contactsCount === 1 ? "" : "s"}`
       : "Research ready";
@@ -1883,14 +1886,7 @@ function EventContextStrip({
   event?: Event;
   stage: "links" | "follow-up";
 }) {
-  const sourceLabel =
-    event?.researchQuality === "body"
-      ? "Event page"
-      : event?.researchQuality === "metadata"
-        ? "Page details"
-        : event?.researchQuality === "screenshot"
-          ? "Screenshot"
-          : "Your description";
+  const sourceLabel = getResearchSourceLabel(event);
 
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-line bg-wash px-3 py-2 text-[11px] font-semibold leading-4 text-slate-600">
@@ -1902,6 +1898,47 @@ function EventContextStrip({
       </span>
     </div>
   );
+}
+
+function getResearchSourceLabel(event?: Event) {
+  if (event?.researchQuality === "body") return "Event page";
+  if (event?.researchQuality === "metadata") return "Page details";
+  if (event?.researchQuality === "screenshot") return "Screenshot";
+  if (event?.researchQuality === "thin") return "Limited page details";
+  return "Your description";
+}
+
+function describeResearchPersonalization(profile: UserProfile, role: NetworkingRole) {
+  const roleLabel = getNetworkingRole(role).shortLabel;
+  const hasPrivateBackground = Boolean(profile.privateContext.trim());
+  const anchors = [profile.organization, profile.school, profile.interests]
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (hasPrivateBackground) {
+    return `Tailored to your ${roleLabel.toLowerCase()} lens and private background.`;
+  }
+  if (anchors.length) {
+    return `Tailored to your ${roleLabel.toLowerCase()} lens and the context in your profile.`;
+  }
+  return `Tailored to your ${roleLabel.toLowerCase()} lens. Add private background in Settings when you want more specific advice.`;
+}
+
+function buildResearchPrompts(brief: PrepBrief, role: NetworkingRole) {
+  const roleLabel = getNetworkingRole(role).shortLabel.toLowerCase();
+  const sourceTopic = brief.keyTopics[1] ?? brief.keyTopics[0] ?? "this event";
+  const hasSourceFact = brief.roomSignals.some((signal) => signal.startsWith("Source:"));
+  const peoplePrompt = brief.speakerHighlights.length
+    ? "Which named speaker or host should I prioritize?"
+    : "What should I listen for in the room?";
+
+  const roomPrompt = hasSourceFact
+    ? `What does the source actually confirm about ${sourceTopic}?`
+    : "What do we actually know about this event?";
+
+  return brief.speakerHighlights.length
+    ? [roomPrompt, peoplePrompt, `Give me three questions that are specific to ${sourceTopic}.`]
+    : [roomPrompt, `What should I focus on here as a ${roleLabel}?`, `Give me three questions that are specific to ${sourceTopic}.`];
 }
 
 function PrepScreen({
@@ -2479,16 +2516,20 @@ function BriefScreen({
   const hasPeopleSignal =
     peopleMentioned.length > 0 &&
     hasSpecificPeopleSignal(event?.researchContext ?? event?.urlOrDescription ?? "", peopleMentioned);
+  const sourceLabel = getResearchSourceLabel(event);
+  const personalization = describeResearchPersonalization(profile, role);
+  const readyQuestions = brief.questionsToAsk.slice(0, 3);
 
   return (
     <div className="space-y-4 lg:space-y-5">
       <RoomStepper current="brief" onNavigate={onNavigate} />
-      <div>
-        <MiniBadge tone="mint">Understand the room</MiniBadge>
-        <h2 className="app-screen-title mt-3 text-ink">
-          Know what this event is about.
-        </h2>
-        <p className="app-info-copy mt-2 text-slate-600">{event?.name}</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <MiniBadge tone="mint">Research</MiniBadge>
+          <h2 className="app-screen-title mt-3 text-ink">Understand this room.</h2>
+          <p className="app-info-copy mt-2 text-slate-600">{event?.name}</p>
+        </div>
+        <MiniBadge tone="blue">{sourceLabel}</MiniBadge>
       </div>
 
       {event?.isDemo && (
@@ -2497,101 +2538,80 @@ function BriefScreen({
         </div>
       )}
 
-      <section className="rounded-lg border border-line bg-white p-3 shadow-sm">
-        <div className="flex items-center justify-between gap-3">
-          <div className="app-kicker text-cobalt">Event research</div>
-          <MiniBadge tone="blue">
-            {event?.researchQuality === "body"
-              ? "Event page read"
-              : event?.researchQuality === "metadata"
-                ? "Page details"
-                : event?.researchQuality === "screenshot"
-                  ? "Screenshot read"
-                  : "Your description"}
-          </MiniBadge>
-        </div>
-        <div className="mt-2 text-base font-black leading-6 text-ink">What this event is about</div>
-        <p className="app-info-copy mt-2 text-slate-700">{brief.eventSummary}</p>
-        {event?.researchSourceUrl && (
-          <a
-            href={event.researchSourceUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex min-h-9 items-center gap-1.5 text-xs font-black text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
-          >
-            View event source
-            <ArrowUpRight className="size-3.5" />
-          </a>
-        )}
-        <div className="mt-4 border-t border-line pt-4">
-          <div className="text-xs font-black text-ink">Signals in this room</div>
-          <ul className="mt-2 space-y-2">
-            {roomSignals.length ? roomSignals.map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The supplied event details are light, so NameTag keeps this research broad instead of inventing context.</CheckLine>}
-          </ul>
-        </div>
-        {brief.keyTopics.length > 0 && (
-          <div className="mt-4 border-t border-line pt-4">
-            <div className="text-xs font-black text-ink">Topics to recognize</div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {brief.keyTopics.map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
-            </div>
-          </div>
-        )}
-        <div className="mt-4 border-t border-line pt-4">
-          <div className="text-xs font-black text-ink">{hasPeopleSignal ? "Speakers named in the source" : "Who to look for"}</div>
-          {hasPeopleSignal ? (
-            <ul className="mt-2 space-y-2">{peopleMentioned.map((person) => <CheckLine key={person}>{person}</CheckLine>)}</ul>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {peopleToMeet.length ? peopleToMeet.map((person) => <CheckLine key={person}>{person}</CheckLine>) : <CheckLine>No named speaker list was provided. Ask an organizer which conversations are most useful to join.</CheckLine>}
-            </ul>
-          )}
-        </div>
-      </section>
-
-      <section className="rounded-lg border border-line bg-white p-3">
-        <div className="app-kicker text-cobalt">Questions to ask</div>
-        <div className="app-section-title mt-1 text-ink">Start with one that feels natural.</div>
-        <ul className="mt-3 space-y-2">
-          {(brief.questionsToAsk.length ? brief.questionsToAsk : ["What brought you to this event today?", "What are you hoping to learn or make progress on?"]).slice(0, 4).map((question) => (
-            <li key={question} className="rounded-lg border border-cobalt/15 bg-cobalt/5 px-3 py-2.5 text-sm font-semibold leading-5 text-slate-700">
-              {question}
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="rounded-lg border border-line bg-white p-3">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-sm font-black text-ink">Keep researching</span>
-          <span className="rounded-md bg-cobalt/10 px-2 py-1 text-[10px] font-black text-cobalt">Ask NameTag</span>
-        </div>
-        <p className="mt-2 text-xs font-semibold leading-5 text-slate-soft">
-          Ask about the speakers, audience, agenda, or which question would be useful. Missing facts stay clearly marked.
-        </p>
-        <div className="mt-3">
-          <ResearchChat key={`${card.id}-${role}`} card={card} event={event} profile={profile} role={role} updateCard={updateCard} />
-        </div>
-        <details className="mt-3 rounded-lg border border-line bg-wash p-3">
-          <summary className="cursor-pointer text-sm font-black text-ink">More research notes</summary>
-          <div className="mt-3 space-y-3 border-t border-line pt-3">
-            <div>
-              <div className="text-xs font-black text-ink">A useful approach</div>
-              <p className="mt-1 text-sm font-semibold leading-5 text-slate-700">
-                {brief.recommendedApproach || "Use one specific question, then let the other person describe what they are working on."}
-              </p>
-            </div>
-            {brief.conversationStarters.length > 0 && (
-              <div>
-                <div className="text-xs font-black text-ink">Extra prompts</div>
-                <ul className="mt-2 space-y-2">
-                  {brief.conversationStarters.slice(0, 3).map((starter) => <CheckLine key={starter}>{starter}</CheckLine>)}
-                </ul>
-              </div>
+      <section className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
+        <div className="border-b border-line bg-wash px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="app-kicker text-cobalt">Your room read</div>
+            {event?.researchSourceUrl && (
+              <a
+                href={event.researchSourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-8 items-center gap-1.5 text-xs font-black text-cobalt underline decoration-cobalt/30 underline-offset-4 transition hover:text-ink"
+              >
+                Source
+                <ArrowUpRight className="size-3.5" />
+              </a>
             )}
           </div>
-        </details>
+          <div className="mt-1 text-sm font-black text-ink">What the event material tells us</div>
+        </div>
+        <div className="space-y-3 p-4">
+          <p className="app-info-copy text-slate-700">{brief.eventSummary}</p>
+          <div className="flex items-start gap-2 rounded-lg border border-mint/20 bg-mint/10 px-3 py-2.5 text-xs font-semibold leading-5 text-teal-800">
+            <BadgeCheck className="mt-0.5 size-4 shrink-0" />
+            <span>{personalization}</span>
+          </div>
+          <details className="rounded-lg border border-line bg-white px-3 py-2.5">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-black text-ink">
+              What NameTag found
+              <span className="text-xs font-semibold text-slate-soft">Source details</span>
+            </summary>
+            <div className="mt-3 space-y-4 border-t border-line pt-3">
+              <div>
+                <div className="app-kicker text-slate-soft">Signals</div>
+                <ul className="mt-2 space-y-2">
+                  {roomSignals.length ? roomSignals.map((signal) => <CheckLine key={signal}>{signal}</CheckLine>) : <CheckLine>The supplied event details are light, so NameTag keeps this research broad instead of inventing context.</CheckLine>}
+                </ul>
+              </div>
+              {brief.keyTopics.length > 0 && (
+                <div>
+                  <div className="app-kicker text-slate-soft">Topics in the source</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {brief.keyTopics.map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
+                  </div>
+                </div>
+              )}
+              <div>
+                <div className="app-kicker text-slate-soft">{hasPeopleSignal ? "People named in the source" : "Who to look for"}</div>
+                {hasPeopleSignal ? (
+                  <ul className="mt-2 space-y-2">{peopleMentioned.map((person) => <CheckLine key={person}>{person}</CheckLine>)}</ul>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {peopleToMeet.length ? peopleToMeet.map((person) => <CheckLine key={person}>{person}</CheckLine>) : <CheckLine>No named speaker list was provided. Ask an organizer which conversations are most useful to join.</CheckLine>}
+                  </ul>
+                )}
+              </div>
+              {readyQuestions.length > 0 && (
+                <div>
+                  <div className="app-kicker text-slate-soft">Questions you can use</div>
+                  <ol className="mt-2 space-y-2 pl-4 text-sm font-semibold leading-5 text-slate-700 marker:font-black marker:text-cobalt">
+                    {readyQuestions.map((question) => <li key={question}>{question}</li>)}
+                  </ol>
+                </div>
+              )}
+              {brief.recommendedApproach && (
+                <div>
+                  <div className="app-kicker text-slate-soft">A good next move</div>
+                  <p className="mt-1.5 text-sm font-semibold leading-5 text-slate-700">{brief.recommendedApproach}</p>
+                </div>
+              )}
+            </div>
+          </details>
+        </div>
       </section>
+
+      <ResearchChat key={`${card.id}-${role}`} card={card} event={event} profile={profile} role={role} brief={brief} updateCard={updateCard} />
 
       <PrimaryButton onClick={onContinue}>
         Choose public links
@@ -2606,40 +2626,40 @@ function BriefScreen({
 
 function DesktopResearchPanel({
   card,
-  event
+  event,
+  profile,
+  role
 }: {
   card: NametagCard;
   event?: Event;
+  profile: UserProfile;
+  role: NetworkingRole;
 }) {
   const brief = card.prepBrief;
   const peopleMentioned = Array.from(new Set([...brief.speakerHighlights, ...brief.suggestedPeople]));
   const hasPeopleSignal =
     peopleMentioned.length > 0 &&
     hasSpecificPeopleSignal(event?.researchContext ?? event?.urlOrDescription ?? "", peopleMentioned);
-  const sourceLabel =
-    event?.researchQuality === "body"
-      ? "Event page read"
-      : event?.researchQuality === "metadata"
-        ? "Page details"
-        : event?.researchQuality === "screenshot"
-          ? "Screenshot read"
-        : "Your description";
+  const sourceLabel = getResearchSourceLabel(event);
+  const personalization = describeResearchPersonalization(profile, role);
 
   return (
     <aside className="hidden lg:sticky lg:top-0 lg:block">
       <section className="overflow-hidden rounded-xl border border-line bg-white shadow-sm shadow-slate-900/[0.03]">
         <div className="border-b border-line bg-[#fbfcfe] px-5 py-4">
-          <div className="app-kicker text-cobalt">Research desk</div>
+          <div className="app-kicker text-cobalt">Research context</div>
           <div className="mt-1 flex items-center justify-between gap-3">
-            <h3 className="app-section-title text-ink">Know the room before you walk in.</h3>
+            <h3 className="app-section-title text-ink">What this answer is based on.</h3>
             <MiniBadge tone="blue">{sourceLabel}</MiniBadge>
           </div>
         </div>
 
         <div className="space-y-4 p-5">
           <section>
-            <div className="app-kicker text-slate-soft">What this room is about</div>
-            <p className="app-info-copy mt-1.5 text-slate-700">{brief.eventSummary}</p>
+            <div className="app-kicker text-slate-soft">Source</div>
+            <p className="app-info-copy mt-1.5 text-slate-700">
+              NameTag uses the event material you provided. It labels missing facts instead of filling them in.
+            </p>
             {event?.researchSourceUrl && (
               <a
                 href={event.researchSourceUrl}
@@ -2654,34 +2674,40 @@ function DesktopResearchPanel({
           </section>
 
           <section className="border-t border-line pt-4">
-            <div className="app-kicker text-slate-soft">Room signals</div>
-            <ul className="mt-2 space-y-2">
-              {(brief.roomSignals ?? []).slice(0, 3).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>)}
-              {!brief.roomSignals?.length && (
-                <CheckLine>The room details are light, so this plan stays broad instead of inventing context.</CheckLine>
+            <div className="app-kicker text-slate-soft">Personalization</div>
+            <p className="app-info-copy mt-1.5 text-slate-700">{personalization}</p>
+          </section>
+
+          <details className="border-t border-line pt-4">
+            <summary className="cursor-pointer text-sm font-black text-ink">Source details</summary>
+            <div className="mt-3 space-y-4">
+              <div>
+                <div className="app-kicker text-slate-soft">Signals</div>
+                <ul className="mt-2 space-y-2">
+                  {(brief.roomSignals ?? []).slice(0, 3).map((signal) => <CheckLine key={signal}>{signal}</CheckLine>)}
+                  {!brief.roomSignals?.length && <CheckLine>The room details are light, so this plan stays broad instead of inventing context.</CheckLine>}
+                </ul>
+              </div>
+              {brief.keyTopics.length > 0 && (
+                <div>
+                  <div className="app-kicker text-slate-soft">Topics</div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {brief.keyTopics.slice(0, 5).map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
+                  </div>
+                </div>
               )}
-            </ul>
-          </section>
-
-          <section className="border-t border-line pt-4">
-            <div className="app-kicker text-slate-soft">Topics to recognize</div>
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {brief.keyTopics.slice(0, 5).map((topic) => <MiniBadge key={topic} tone="slate">{topic}</MiniBadge>)}
+              <div>
+                <div className="app-kicker text-slate-soft">{hasPeopleSignal ? "People named in the source" : "Mingle plan"}</div>
+                {hasPeopleSignal ? (
+                  <ul className="mt-2 space-y-2">
+                    {peopleMentioned.slice(0, 4).map((person) => <CheckLine key={person}>{person}</CheckLine>)}
+                  </ul>
+                ) : (
+                  <p className="app-info-copy mt-1.5 text-slate-600">No named speaker list was provided. Ask one useful question instead of assuming who is in the room.</p>
+                )}
+              </div>
             </div>
-          </section>
-
-          <section className="border-t border-line pt-4">
-            <div className="app-kicker text-slate-soft">{hasPeopleSignal ? "People named in the source" : "Mingle plan"}</div>
-            {hasPeopleSignal ? (
-              <ul className="mt-2 space-y-2">
-                {peopleMentioned.slice(0, 4).map((person) => <CheckLine key={person}>{person}</CheckLine>)}
-              </ul>
-            ) : (
-              <p className="app-info-copy mt-1.5 text-slate-600">
-                No named speaker list was provided. Ask one useful question instead of assuming who is in the room.
-              </p>
-            )}
-          </section>
+          </details>
         </div>
 
       </section>
@@ -2694,22 +2720,22 @@ function ResearchChat({
   event,
   profile,
   role,
+  brief,
   updateCard
 }: {
   card: NametagCard;
   event?: Event;
   profile: UserProfile;
   role: NetworkingRole;
+  brief: PrepBrief;
   updateCard: (patch: Partial<NametagCard>) => void;
 }) {
   const [question, setQuestion] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [suggestedQuestions, setSuggestedQuestions] = useState([
-    "What is this event actually about?",
-    "Who would be most useful to meet here?",
-    "What are three specific questions I could ask?"
-  ]);
+  const [suggestedQuestions, setSuggestedQuestions] = useState(() => buildResearchPrompts(brief, role));
+  const [answerMode, setAnswerMode] = useState<"GPT-5.6" | "Prepared fallback" | null>(null);
   const messages = card.researchMessages ?? [];
+  const sourceLabel = getResearchSourceLabel(event);
 
   async function askResearchQuestion(value: string) {
     const content = value.trim();
@@ -2748,7 +2774,7 @@ function ResearchChat({
           }))
         })
       });
-      const data = (await response.json()) as { result?: ResearchChatResult; error?: string };
+      const data = (await response.json()) as { mode?: string; result?: ResearchChatResult; error?: string };
       if (!response.ok || !data.result) {
         throw new Error(data.error ?? "Research chat was unavailable");
       }
@@ -2763,6 +2789,7 @@ function ResearchChat({
       if (data.result.suggestedQuestions.length) {
         setSuggestedQuestions(data.result.suggestedQuestions.slice(0, 3));
       }
+      setAnswerMode(data.mode === "openai" ? "GPT-5.6" : "Prepared fallback");
     } catch {
       const fallbackMessage: ResearchMessage = {
         id: makeId("research"),
@@ -2774,6 +2801,7 @@ function ResearchChat({
       updateCard({
         researchMessages: [...nextMessages, fallbackMessage].slice(-8)
       });
+      setAnswerMode("Prepared fallback");
     } finally {
       setIsThinking(false);
     }
@@ -2785,35 +2813,38 @@ function ResearchChat({
   }
 
   return (
-    <section className="overflow-hidden rounded-lg border border-ink bg-white shadow-sm">
-      <div className="flex items-start gap-3 border-b border-line bg-wash px-3 py-3">
-        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-ink text-mint">
+    <section className="overflow-hidden rounded-xl border-2 border-ink bg-white shadow-sm shadow-slate-900/[0.06]">
+      <div className="flex items-start gap-3 bg-ink px-4 py-4 text-white">
+        <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-mint text-ink">
           <MessageCircle className="size-4" />
         </span>
-        <div className="min-w-0">
-          <div className="text-sm font-black text-ink">Ask about this event</div>
-          <p className="mt-0.5 text-xs font-semibold leading-5 text-slate-soft">
-            Ask what you did not have time to research. Answers use the event source and your private context; missing facts stay clearly marked.
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm font-black">Ask until the room makes sense.</div>
+            {answerMode && <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-black text-white/75">{answerMode}</span>}
+          </div>
+          <p className="mt-1 text-xs font-semibold leading-5 text-white/70">
+            Grounded in {sourceLabel.toLowerCase()}. Advice uses any background you choose to save; missing facts stay explicit.
           </p>
         </div>
       </div>
 
-      <div className="space-y-3 p-3">
+      <div className="space-y-3 p-4">
         {messages.length === 0 && (
-          <div className="rounded-lg border border-dashed border-cobalt/25 bg-cobalt/5 p-3 text-xs font-semibold leading-5 text-slate-700">
-            Ask until the room makes sense. Start with the event, speakers, audience, or a specific question you could ask.
+          <div className="rounded-lg bg-wash px-3 py-2.5 text-xs font-semibold leading-5 text-slate-700">
+            Start with what you need to understand, then ask for questions you can use in the room. NameTag will not pretend the source gave it facts it did not.
           </div>
         )}
 
         {messages.length > 0 && (
-          <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+          <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={
                   message.role === "user"
                     ? "ml-7 rounded-lg bg-ink px-3 py-2 text-sm font-semibold leading-5 text-white"
-                    : "mr-3 rounded-lg border border-cobalt/20 bg-cobalt/5 px-3 py-2 text-sm font-semibold leading-5 text-slate-700"
+                    : "mr-3 whitespace-pre-wrap rounded-lg border border-cobalt/20 bg-cobalt/5 px-3 py-2 text-sm font-semibold leading-5 text-slate-700"
                 }
               >
                 {message.content}
@@ -2827,7 +2858,7 @@ function ResearchChat({
             className={`${inputClass} min-h-11 flex-1 resize-none py-2.5`}
             value={question}
             onChange={(eventChange) => setQuestion(eventChange.target.value)}
-            placeholder="Ask about speakers, agenda, audience, or what to ask..."
+            placeholder="What do you want to understand before you walk in?"
             aria-label="Ask NameTag about this event"
             rows={1}
             maxLength={600}
@@ -2842,18 +2873,21 @@ function ResearchChat({
           </button>
         </form>
 
-        <div className="flex flex-wrap gap-2">
-          {suggestedQuestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              disabled={isThinking}
-              onClick={() => void askResearchQuestion(suggestion)}
-              className="rounded-md border border-line bg-white px-2.5 py-1.5 text-left text-xs font-bold leading-4 text-slate-700 transition hover:border-ink hover:bg-wash disabled:opacity-50"
-            >
-              {suggestion}
-            </button>
-          ))}
+        <div>
+          <div className="mb-2 app-kicker text-slate-soft">Try one</div>
+          <div className="flex flex-wrap gap-2">
+            {suggestedQuestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                disabled={isThinking}
+                onClick={() => void askResearchQuestion(suggestion)}
+                className="rounded-md border border-line bg-white px-2.5 py-1.5 text-left text-xs font-bold leading-4 text-slate-700 transition hover:border-ink hover:bg-wash disabled:opacity-50"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

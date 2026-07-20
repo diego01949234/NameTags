@@ -57,18 +57,20 @@ export async function POST(request: Request) {
     const html = await readTextWithLimit(response, MAX_EVENT_PAGE_BYTES);
     const title = extractOgTitle(html) ?? sourceUrl.hostname;
     const description = extractMetaDescription(html);
-    const bodyText = htmlToText(html);
+    const structuredText = extractStructuredEventFacts(html);
+    const bodyText = htmlToText(extractReadableHtml(html));
     const metaText = [title, description].filter(Boolean).join(". ");
     const bodyWordCount = countWords(bodyText);
     const descriptionWordCount = countWords(description ?? "");
     const hasUsefulBody = bodyWordCount >= 80;
     const hasUsefulMeta = descriptionWordCount >= 12;
-    const text = [metaText, hasUsefulBody ? bodyText : ""]
+    const hasUsefulStructuredData = countWords(structuredText) >= 8;
+    const text = [metaText, structuredText, hasUsefulBody ? bodyText : ""]
       .filter(Boolean)
       .join("\n\n")
       .slice(0, 6000);
 
-    if (response.ok && !hasUsefulBody && !hasUsefulMeta) {
+    if (response.ok && !hasUsefulBody && !hasUsefulMeta && !hasUsefulStructuredData) {
       return Response.json({
         ok: false,
         title,
@@ -203,6 +205,116 @@ function extractMetaContent(html: string, attrName: "name" | "property", attrVal
     return attr?.toLowerCase() === attrValue.toLowerCase();
   });
   return tag?.match(/\bcontent=["']([^"']*)["']/i)?.[1];
+}
+
+function extractReadableHtml(html: string) {
+  const candidates = ["main", "article"]
+    .map((tag) => html.match(new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"))?.[1] ?? "")
+    .filter(Boolean)
+    .sort((first, second) => second.length - first.length);
+
+  return candidates[0] || html;
+}
+
+function extractStructuredEventFacts(html: string) {
+  const facts: string[] = [];
+  const scripts = Array.from(
+    html.matchAll(
+      /<script\b[^>]*\btype\s*=\s*(?:"application\/ld\+json"|'application\/ld\+json'|application\/ld\+json)[^>]*>([\s\S]*?)<\/script>/gi
+    )
+  );
+
+  for (const script of scripts) {
+    try {
+      const json = JSON.parse(script[1]);
+      for (const item of flattenJsonLd(json)) {
+        if (!isJsonLdEvent(item)) continue;
+
+        const name = getStructuredText(item.name, 220);
+        const description = getStructuredText(item.description, 900);
+        const startDate = getStructuredText(item.startDate, 100);
+        const endDate = getStructuredText(item.endDate, 100);
+        const location = getStructuredText(item.location, 220);
+        const organizers = getStructuredNames(item.organizer);
+        const featuredPeople = getStructuredNames(item.performer ?? item.speaker);
+
+        if (name) facts.push(`Structured event title: ${name}`);
+        if (description) facts.push(`Structured event description: ${description}`);
+        if (startDate) facts.push(`Structured start: ${startDate}`);
+        if (endDate) facts.push(`Structured end: ${endDate}`);
+        if (location) facts.push(`Structured location: ${location}`);
+        if (organizers.length) facts.push(`Structured organizer: ${organizers.join(", ")}`);
+        if (featuredPeople.length) facts.push(`Structured featured people: ${featuredPeople.join(", ")}`);
+      }
+    } catch {
+      // Some sites emit invalid JSON-LD. The readable page and metadata still work.
+    }
+  }
+
+  return Array.from(new Set(facts)).slice(0, 10).join("\n");
+}
+
+function flattenJsonLd(value: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) return value.flatMap(flattenJsonLd);
+  if (!isRecord(value)) return [];
+
+  const graph = value["@graph"];
+  return [value, ...flattenJsonLd(graph)];
+}
+
+function isJsonLdEvent(value: Record<string, unknown>) {
+  const types = Array.isArray(value["@type"]) ? value["@type"] : [value["@type"]];
+  return types.some((type) => String(type ?? "").toLowerCase().includes("event"));
+}
+
+function getStructuredNames(value: unknown) {
+  const values = Array.isArray(value) ? value : [value];
+  return Array.from(
+    new Set(
+      values
+        .map((item) => (isRecord(item) ? getStructuredText(item.name, 140) : getStructuredText(item, 140)))
+        .filter(Boolean)
+    )
+  ).slice(0, 6);
+}
+
+function getStructuredText(value: unknown, maxLength: number) {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number") {
+    return cleanStructuredText(String(value)).slice(0, maxLength);
+  }
+  if (Array.isArray(value)) {
+    return Array.from(new Set(value.map((item) => getStructuredText(item, maxLength)).filter(Boolean)))
+      .join(", ")
+      .slice(0, maxLength);
+  }
+  if (!isRecord(value)) return "";
+
+  const directFields = [
+    value.name,
+    value.streetAddress,
+    value.addressLocality,
+    value.addressRegion,
+    value.addressCountry
+  ];
+  return Array.from(new Set(directFields.map((item) => getStructuredText(item, maxLength)).filter(Boolean)))
+    .join(", ")
+    .slice(0, maxLength);
+}
+
+function cleanStructuredText(value: string) {
+  return value
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function htmlToText(html: string) {
