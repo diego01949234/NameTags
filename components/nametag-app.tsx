@@ -77,6 +77,7 @@ type View = "home" | "vault" | "prep" | "brief" | "card" | "share" | "debrief";
 type RoomView = "brief" | "card" | "share" | "debrief";
 type ManualContactInput = Pick<Contact, "name" | "contact" | "note" | "promise" | "priority">;
 type CloudStatus = "saved" | "saving" | "error";
+type WorkspaceStorageMode = "account" | "device" | "sample";
 type EventScreenshot = { dataUrl: string; name: string };
 
 const MAX_EVENT_SCREENSHOT_BYTES = 3 * 1024 * 1024;
@@ -129,6 +130,7 @@ export function NametagApp() {
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
   const demoWorkspaceRef = useRef<NametagState | null>(null);
   const syncedWorkspaceRef = useRef("");
+  const workspaceStorageMode: WorkspaceStorageMode = demoMode ? "sample" : session ? "account" : "device";
 
   useEffect(() => {
     stateRef.current = state;
@@ -793,6 +795,8 @@ export function NametagApp() {
             accountName={getAccountDisplayName(session?.user) || state.profile.name}
             accountEmail={session?.user.email}
             cloudStatus={cloudStatus}
+            workspaceStorageMode={workspaceStorageMode}
+            accountSyncAvailable={authConfigured}
             onOpenEvents={() => setView("home")}
             onResearch={() => activeCard ? setView("brief") : startNewEvent()}
             onShowCard={() => activeCard ? setView("share") : startNewEvent()}
@@ -822,7 +826,7 @@ export function NametagApp() {
                 view={view}
                 activeEvent={activeEvent}
                 cloudStatus={cloudStatus}
-                accountEmail={session?.user.email}
+                workspaceStorageMode={workspaceStorageMode}
                 onPrepareEvent={startNewEvent}
               />
             )}
@@ -858,6 +862,8 @@ export function NametagApp() {
                   accountName={getAccountDisplayName(session?.user)}
                   accountEmail={session?.user.email}
                   cloudStatus={cloudStatus}
+                  workspaceStorageMode={workspaceStorageMode}
+                  accountSyncAvailable={authConfigured}
                   onSignOut={() => void signOut()}
                 />
               )}
@@ -961,6 +967,7 @@ export function NametagApp() {
                 accountName={getAccountDisplayName(session.user)}
                 accountEmail={session?.user.email}
                 cloudStatus={cloudStatus}
+                workspaceStorageMode={workspaceStorageMode}
                 onClose={() => setMenuOpen(false)}
                 onSignOut={() => void signOut()}
               />
@@ -1011,6 +1018,20 @@ function getCloudStatusText(status: CloudStatus) {
   if (status === "saving") return "Saving changes";
   if (status === "error") return "Cloud sync needs a retry";
   return "Saved to your account";
+}
+
+function getWorkspaceStorageText(mode: WorkspaceStorageMode, status: CloudStatus) {
+  if (mode === "sample") return "Sample workspace - changes are temporary";
+  if (mode === "device") return "Stored on this device only";
+  return getCloudStatusText(status);
+}
+
+function getWorkspaceStorageBadge(mode: WorkspaceStorageMode, status: CloudStatus) {
+  if (mode === "sample") return "Sample data";
+  if (mode === "device") return "This device";
+  if (status === "saving") return "Saving";
+  if (status === "error") return "Check sync";
+  return "Auto-save on";
 }
 
 function claimStateForUser(workspace: NametagState, userId: string, accountName = ""): NametagState {
@@ -1098,13 +1119,13 @@ function DesktopTopbar({
   view,
   activeEvent,
   cloudStatus,
-  accountEmail,
+  workspaceStorageMode,
   onPrepareEvent
 }: {
   view: View;
   activeEvent?: Event;
   cloudStatus: CloudStatus;
-  accountEmail?: string;
+  workspaceStorageMode: WorkspaceStorageMode;
   onPrepareEvent: () => void;
 }) {
   const labels: Record<View, { title: string; eyebrow: string }> = {
@@ -1134,9 +1155,9 @@ function DesktopTopbar({
       </div>
 
       <div className="flex items-center gap-3">
-        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${cloudStatus === "error" ? "text-coral" : "text-slate-soft"}`}>
-          <span className={`size-1.5 rounded-full ${cloudStatus === "error" ? "bg-coral" : cloudStatus === "saving" ? "bg-amber-400" : "bg-mint"}`} />
-          {accountEmail ? getCloudStatusText(cloudStatus) : "Demo workspace"}
+        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${workspaceStorageMode === "account" && cloudStatus === "error" ? "text-coral" : "text-slate-soft"}`}>
+          <span className={`size-1.5 rounded-full ${workspaceStorageMode === "sample" ? "bg-amber-400" : workspaceStorageMode === "device" ? "bg-slate-300" : cloudStatus === "error" ? "bg-coral" : cloudStatus === "saving" ? "bg-amber-400" : "bg-mint"}`} />
+          {getWorkspaceStorageText(workspaceStorageMode, cloudStatus)}
         </span>
         <button
           type="button"
@@ -1158,6 +1179,8 @@ function DesktopSidebar({
   accountName,
   accountEmail,
   cloudStatus,
+  workspaceStorageMode,
+  accountSyncAvailable,
   onOpenEvents,
   onResearch,
   onShowCard,
@@ -1172,6 +1195,8 @@ function DesktopSidebar({
   accountName: string;
   accountEmail?: string;
   cloudStatus: CloudStatus;
+  workspaceStorageMode: WorkspaceStorageMode;
+  accountSyncAvailable: boolean;
   onOpenEvents: () => void;
   onResearch: () => void;
   onShowCard: () => void;
@@ -1251,17 +1276,23 @@ function DesktopSidebar({
 
       <div className="mt-auto border-t border-line pt-4">
         <div className="flex items-start gap-2.5 px-1">
-          <Cloud className={`mt-0.5 size-4 shrink-0 ${cloudStatus === "error" ? "text-coral" : "text-mint"}`} />
+          <Cloud className={`mt-0.5 size-4 shrink-0 ${workspaceStorageMode === "account" && cloudStatus === "error" ? "text-coral" : workspaceStorageMode === "account" ? "text-mint" : "text-slate-400"}`} />
           <div className="min-w-0">
-            <div className="text-xs font-medium text-ink">{accountEmail ? getCloudStatusText(cloudStatus) : "Demo workspace"}</div>
+            <div className="text-xs font-medium text-ink">{getWorkspaceStorageText(workspaceStorageMode, cloudStatus)}</div>
             <div className="mt-0.5 truncate text-[11px] text-slate-soft">
-              {accountEmail || "Sign in to save across devices."}
+              {workspaceStorageMode === "account"
+                ? accountEmail
+                : workspaceStorageMode === "sample"
+                  ? "Explore freely - it will reset when you leave."
+                  : accountSyncAvailable
+                    ? "Sign in to save across devices."
+                    : "Account sync is not configured in this browser."}
             </div>
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between gap-2 px-1">
-          <span className="min-w-0 truncate text-xs font-semibold text-ink">{accountName || "Your NameTag account"}</span>
-          {accountEmail && (
+          <span className="min-w-0 truncate text-xs font-semibold text-ink">{workspaceStorageMode === "sample" ? "Sample event" : accountName || "Your NameTag account"}</span>
+          {workspaceStorageMode === "account" && accountEmail && (
             <button
               type="button"
               onClick={onSignOut}
@@ -1331,12 +1362,14 @@ function AppMenu({
   accountName,
   accountEmail,
   cloudStatus,
+  workspaceStorageMode,
   onClose,
   onSignOut
 }: {
   accountName: string;
   accountEmail?: string;
   cloudStatus: CloudStatus;
+  workspaceStorageMode: WorkspaceStorageMode;
   onClose: () => void;
   onSignOut: () => void;
 }) {
@@ -1366,11 +1399,11 @@ function AppMenu({
                 <UserRound className="size-4" />
               </span>
               <div className="min-w-0">
-                <div className="truncate text-sm font-black text-ink">{accountName || "Your NameTag account"}</div>
-                {accountEmail && <div className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{accountEmail}</div>}
+                <div className="truncate text-sm font-black text-ink">{workspaceStorageMode === "sample" ? "Sample event" : accountName || "Your NameTag account"}</div>
+                {workspaceStorageMode === "account" && accountEmail && <div className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{accountEmail}</div>}
                 <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-soft">
                   <Cloud className="size-3.5" />
-                  {getCloudStatusText(cloudStatus)}
+                  {getWorkspaceStorageText(workspaceStorageMode, cloudStatus)}
                 </div>
               </div>
             </div>
@@ -1381,16 +1414,18 @@ function AppMenu({
           </section>
         </div>
 
-        <div className="mt-auto border-t border-line bg-wash p-4">
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-black text-ink transition hover:border-coral hover:text-coral"
-          >
-            <LogOut className="size-4" />
-            Sign out
-          </button>
-        </div>
+        {workspaceStorageMode === "account" && (
+          <div className="mt-auto border-t border-line bg-wash p-4">
+            <button
+              type="button"
+              onClick={onSignOut}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-black text-ink transition hover:border-coral hover:text-coral"
+            >
+              <LogOut className="size-4" />
+              Sign out
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );
@@ -2143,6 +2178,8 @@ function VaultScreen({
   accountName,
   accountEmail,
   cloudStatus,
+  workspaceStorageMode,
+  accountSyncAvailable,
   onSignOut
 }: {
   state: NametagState;
@@ -2153,6 +2190,8 @@ function VaultScreen({
   accountName: string;
   accountEmail?: string;
   cloudStatus: CloudStatus;
+  workspaceStorageMode: WorkspaceStorageMode;
+  accountSyncAvailable: boolean;
   onSignOut: () => void;
 }) {
   const [linkError, setLinkError] = useState("");
@@ -2193,30 +2232,40 @@ function VaultScreen({
       <section className="space-y-3 rounded-lg border border-line bg-wash p-3">
         <SectionTitle
           icon={UserRound}
-          title="Account"
-          action={<MiniBadge tone={cloudStatus === "error" ? "coral" : "mint"}>{cloudStatus === "saving" ? "Saving" : cloudStatus === "error" ? "Check sync" : "Auto-save on"}</MiniBadge>}
+          title={workspaceStorageMode === "account" ? "Account" : workspaceStorageMode === "sample" ? "Sample workspace" : "This device"}
+          action={<MiniBadge tone={workspaceStorageMode === "account" && cloudStatus === "error" ? "coral" : workspaceStorageMode === "account" ? "mint" : "blue"}>{getWorkspaceStorageBadge(workspaceStorageMode, cloudStatus)}</MiniBadge>}
         />
         <div className="flex items-start gap-3">
           <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-ink text-mint">
             <UserRound className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-black text-ink">{accountName || state.profile.name || "Your NameTag account"}</div>
-            {accountEmail && <div className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{accountEmail}</div>}
-            <div className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${cloudStatus === "error" ? "text-coral" : "text-teal-800"}`}>
+            <div className="truncate text-sm font-black text-ink">{workspaceStorageMode === "sample" ? "Founder Meetup sample" : accountName || state.profile.name || "Your NameTag account"}</div>
+            {workspaceStorageMode === "account" && accountEmail && <div className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{accountEmail}</div>}
+            <div className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${workspaceStorageMode === "account" && cloudStatus === "error" ? "text-coral" : workspaceStorageMode === "account" ? "text-teal-800" : "text-slate-600"}`}>
               <Cloud className="size-3.5" />
-              {getCloudStatusText(cloudStatus)}
+              {getWorkspaceStorageText(workspaceStorageMode, cloudStatus)}
             </div>
+            {workspaceStorageMode === "sample" && <p className="mt-2 text-xs font-semibold leading-5 text-slate-soft">Try the full flow, then sign in to keep your own rooms.</p>}
+            {workspaceStorageMode === "device" && (
+              <p className="mt-2 text-xs font-semibold leading-5 text-slate-soft">
+                {accountSyncAvailable
+                  ? "Your edits stay in this browser. Sign in to take them across devices."
+                  : "Your edits stay in this browser. Account sync is not connected in this build yet."}
+              </p>
+            )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onSignOut}
-          className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-black text-ink transition hover:border-coral hover:text-coral"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </button>
+        {workspaceStorageMode === "account" && (
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-black text-ink transition hover:border-coral hover:text-coral"
+          >
+            <LogOut className="size-4" />
+            Sign out
+          </button>
+        )}
       </section>
 
       <section className="space-y-3 rounded-lg border border-line bg-slate-50 p-3">
