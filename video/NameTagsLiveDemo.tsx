@@ -466,20 +466,165 @@ const InPhoneToast = ({ frame, start, text, color = C.mint }: { frame: number; s
   );
 };
 
+const FullScreenStatement = ({
+  frame,
+  start,
+  duration,
+  eyebrow,
+  title,
+  body,
+  accent,
+}: {
+  frame: number;
+  start: number;
+  duration: number;
+  eyebrow: string;
+  title: ReactNode;
+  body: ReactNode;
+  accent: string;
+}) => {
+  const { fps } = useVideoConfig();
+  const inValue = tween(frame, sec(start, fps), sec(0.56, fps));
+  const outValue = tween(frame, sec(start + duration - 0.62, fps), sec(0.62, fps));
+  const opacity = inValue * (1 - outValue);
+  const titleIn = spring({ frame: Math.max(0, frame - sec(start + 0.14, fps)), fps, config: { damping: 15, stiffness: 118 } });
+  const bodyIn = spring({ frame: Math.max(0, frame - sec(start + 0.5, fps)), fps, config: { damping: 18, stiffness: 118 } });
+  const lineIn = spring({ frame: Math.max(0, frame - sec(start + 0.1, fps)), fps, config: { damping: 18, stiffness: 150 } });
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        inset: 0,
+        zIndex: 50,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        boxSizing: "border-box",
+        padding: "130px 150px 120px",
+        overflow: "hidden",
+        backgroundColor: C.ink,
+        color: C.white,
+        opacity,
+      }}
+    >
+      <Grid dark />
+      <div
+        style={{
+          position: "absolute",
+          top: 48,
+          left: 64,
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          opacity: bodyIn,
+        }}
+      >
+        <NMark size={38} />
+        <span style={{ color: C.white, fontSize: 23, fontWeight: 830 }}>NameTags</span>
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          width: 720,
+          height: 720,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${accent}45 0%, transparent 68%)`,
+          transform: `scale(${0.72 + lineIn * 0.45})`,
+          opacity: 0.72,
+          filter: "blur(5px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 15px",
+          border: `1px solid ${accent}88`,
+          borderRadius: 999,
+          backgroundColor: `${accent}24`,
+          color: C.white,
+          fontSize: 14,
+          fontWeight: 840,
+          letterSpacing: 0.5,
+          opacity: bodyIn,
+          transform: `translateY(${(1 - bodyIn) * 16}px)`,
+        }}
+      >
+        <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: accent, boxShadow: `0 0 18px ${accent}` }} />
+        {eyebrow}
+      </div>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1470,
+          marginTop: 30,
+          color: C.white,
+          textAlign: "center",
+          fontSize: 122,
+          lineHeight: 0.92,
+          fontWeight: 850,
+          letterSpacing: 0,
+          opacity: titleIn,
+          transform: `translateY(${(1 - titleIn) * 52}px) scale(${0.96 + titleIn * 0.04})`,
+        }}
+      >
+        {title}
+      </div>
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 840,
+          marginTop: 32,
+          color: "rgba(255,255,255,.72)",
+          textAlign: "center",
+          fontSize: 25,
+          lineHeight: 1.42,
+          fontWeight: 580,
+          opacity: bodyIn,
+          transform: `translateY(${(1 - bodyIn) * 20}px)`,
+        }}
+      >
+        {body}
+      </div>
+      <div
+        style={{
+          position: "absolute",
+          bottom: 58,
+          width: 420 * lineIn,
+          height: 3,
+          borderRadius: 99,
+          backgroundColor: accent,
+          boxShadow: `0 0 25px ${accent}99`,
+        }}
+      />
+    </div>
+  );
+};
+
 const ChatPanel = ({ frame, start }: { frame: number; start: number }) => {
   const { fps } = useVideoConfig();
   const panel = spring({ frame: Math.max(0, frame - sec(start, fps)), fps, config: { damping: 17, stiffness: 132 } });
-  const question = spring({ frame: Math.max(0, frame - sec(start + 0.45, fps)), fps, config: { damping: 17, stiffness: 150 } });
-  const answer = spring({ frame: Math.max(0, frame - sec(start + 1.05, fps)), fps, config: { damping: 17, stiffness: 140 } });
+  const question = spring({ frame: Math.max(0, frame - sec(start + 2.0, fps)), fps, config: { damping: 17, stiffness: 150 } });
+  const answer = spring({ frame: Math.max(0, frame - sec(start + 4.95, fps)), fps, config: { damping: 17, stiffness: 140 } });
+  const prompt = "Who should I talk to first?";
   const answerText = "Start with someone testing an early idea. Ask what they are learning before you explain your own product.";
-  const typed = Math.round(tween(frame, sec(start + 1.2, fps), sec(4.0, fps)) * answerText.length);
+  const typedPrompt = Math.round(tween(frame, sec(start + 0.48, fps), sec(1.42, fps)) * prompt.length);
+  const typed = Math.round(tween(frame, sec(start + 5.2, fps), sec(4.0, fps)) * answerText.length);
+  const analysisItems = ["Reading event details", "Finding room signals", "Planning an opening question"];
   return (
     <div
       style={{
         position: "absolute",
         left: 77,
-        top: 744,
-        width: 610,
+        top: 708,
+        width: 660,
         padding: "16px 17px",
         boxSizing: "border-box",
         border: `1px solid ${C.line}`,
@@ -494,8 +639,27 @@ const ChatPanel = ({ frame, start }: { frame: number; start: number }) => {
         <span style={{ display: "grid", width: 20, height: 20, placeItems: "center", borderRadius: 7, backgroundColor: C.cobaltPale, fontSize: 13 }}>+</span>
         ASK NAMETAGS
       </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, padding: "10px 11px", border: `1px solid ${C.cobalt}55`, borderRadius: 11, backgroundColor: "#FAFCFF", opacity: 1 - question }}>
+        <span style={{ flex: 1, color: C.inkSoft, fontSize: 14, fontWeight: 650 }}>
+          {prompt.slice(0, typedPrompt)}
+          {typedPrompt < prompt.length ? <span style={{ color: C.cobalt }}>|</span> : null}
+        </span>
+        <span style={{ display: "grid", width: 26, height: 26, placeItems: "center", borderRadius: 8, backgroundColor: C.cobalt, color: C.white, fontSize: 16, fontWeight: 850, transform: `scale(${typedPrompt === prompt.length ? 1 : 0.82})` }}>↑</span>
+      </div>
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12, opacity: question, transform: `translateY(${(1 - question) * 10}px)` }}>
-        <div style={{ maxWidth: 340, padding: "9px 12px", borderRadius: "12px 12px 3px 12px", backgroundColor: C.cobalt, color: C.white, fontSize: 14, fontWeight: 680 }}>Who should I talk to first?</div>
+        <div style={{ maxWidth: 340, padding: "9px 12px", borderRadius: "12px 12px 3px 12px", backgroundColor: C.cobalt, color: C.white, fontSize: 14, fontWeight: 680 }}>{prompt}</div>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 7, marginTop: 11, opacity: Math.min(1, tween(frame, sec(start + 2.58, fps), sec(0.32, fps))) }}>
+        {analysisItems.map((item, index) => {
+          const itemIn = spring({ frame: Math.max(0, frame - sec(start + 2.58 + index * 0.48, fps)), fps, config: { damping: 16, stiffness: 144 } });
+          const complete = frame >= sec(start + 4.68 + index * 0.12, fps);
+          return (
+            <div key={item} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 9px", borderRadius: 999, backgroundColor: C.wash, color: C.inkSoft, fontSize: 11, fontWeight: 750, opacity: itemIn, transform: `translateY(${(1 - itemIn) * 8}px)` }}>
+              <span style={{ display: "grid", width: 15, height: 15, placeItems: "center", borderRadius: 5, backgroundColor: complete ? C.mint : C.cobaltPale, color: complete ? C.white : C.cobalt, fontSize: 9, fontWeight: 900 }}>{complete ? "✓" : "…"}</span>
+              {item}
+            </div>
+          );
+        })}
       </div>
       <div style={{ display: "flex", marginTop: 10, opacity: answer, transform: `translateY(${(1 - answer) * 10}px)` }}>
         <div style={{ maxWidth: 490, padding: "10px 12px", borderRadius: "12px 12px 12px 3px", backgroundColor: C.wash, color: C.inkSoft, fontSize: 14, lineHeight: 1.36, fontWeight: 640 }}>
@@ -571,6 +735,15 @@ const OpeningScene = () => {
       <Phone x={1182} y={104} scale={0.94 + phone * 0.07} rotate={interpolate(phone, [0, 1], [7, -2])} opacity={phone}>
         <AppScreen src="mobile-events.png" />
       </Phone>
+      <FullScreenStatement
+        frame={frame}
+        start={0.18}
+        duration={3.9}
+        eyebrow="THE EVENT MOMENT"
+        title={<>Networking should not<br />begin with panic.</>}
+        body={<>No time to research. Too many ways to connect. Too much to remember after the room clears.</>}
+        accent={C.coral}
+      />
     </Canvas>
   );
 };

@@ -12,7 +12,9 @@
     "video:preview": "remotion render video/index.ts NameTagsFilmPreview out/nametags-65s-preview.mp4 --codec=h264 --crf=18",
     "video:4k": "remotion render video/index.ts NameTagsFilm out/nametags-65s-4k60.mp4 --codec=h264 --crf=18",
     "video:demo": "remotion render video/index.ts NameTagsLiveDemoPreview out/nametags-live-demo-100s.mp4 --codec=h264 --crf=18 --concurrency=4",
-    "video:demo:4k": "remotion render video/index.ts NameTagsLiveDemo out/nametags-live-demo-100s-4k60.mp4 --codec=h264 --crf=18 --concurrency=2"
+    "video:demo:4k": "remotion render video/index.ts NameTagsLiveDemo out/nametags-live-demo-100s-4k60.mp4 --codec=h264 --crf=18 --concurrency=2",
+    "video:titles": "remotion render video/index.ts NameTagsMotionTitlesPreview out/nametags-motion-titles-45s.mp4 --codec=h264 --crf=18 --concurrency=4",
+    "video:titles:4k": "remotion render video/index.ts NameTagsMotionTitles out/nametags-motion-titles-45s-4k60.mp4 --codec=h264 --crf=18 --concurrency=2"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",

@@ -1,6 +1,6 @@
 # NameTags Product Film
 
-This folder contains two code-made NameTags videos. The original 65 second product film is a high-motion software piece. The current live demo is a 100 second, landscape SaaS walkthrough using real NameTags screens inside a portrait phone frame. It is intentionally code-made rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
+This folder contains code-made NameTags videos. The original 65 second product film is a high-motion software piece. The live demo is a 100 second landscape walkthrough using real NameTags screens inside a portrait phone frame. `NameTagsMotionTitles` is a separate, screen-free motion package to cut around a genuine mobile screen recording, rather than pretending static screenshots are a live product interaction.
 
 ## Compositions
 
@@ -8,6 +8,8 @@ This folder contains two code-made NameTags videos. The original 65 second produ
 - `NameTagsFilm`: 3840x2160, 60fps. Use this for the final 4K export.
 - `NameTagsLiveDemoPreview`: 1920x1080, 30fps, 100 seconds. The landscape live mobile demo.
 - `NameTagsLiveDemo`: 3840x2160, 60fps, 100 seconds. The 4K live mobile demo.
+- `NameTagsMotionTitlesPreview`: 1920x1080, 30fps, 45 seconds. The typography, AI-analysis, QR and follow-up motion package for a real screen-recorded demo.
+- `NameTagsMotionTitles`: 3840x2160, 60fps, 45 seconds. The 4K motion package.
 
 ## Commands
 
@@ -17,6 +19,8 @@ npm run video:preview
 npm run video:4k
 npm run video:demo
 npm run video:demo:4k
+npm run video:titles
+npm run video:titles:4k
 ```
 
 Renders are written to the Git-ignored `out/` folder.
@@ -45,3 +49,11 @@ The only QR target is `https://nametags-network.vercel.app`; change `PRODUCTION_
 The source screens live in `public/video-demo/`; they were captured from the
 working local NameTags app. `nametags-live-demo.srt` is the matching subtitle
 file for editors.
+
+## Motion-title edit plan
+
+Use `NameTagsMotionTitles` as the energetic story layer, then put a genuine
+screen recording of the app immediately after each related title: Research,
+selected links + QR, and Follow-up. The 45-second motion package contains no
+phone shell and no application screenshots; it intentionally leaves the real
+interaction evidence to a proper device recording.
