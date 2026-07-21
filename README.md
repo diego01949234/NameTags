@@ -1,12 +1,12 @@
-# NameTag
+# NameTags
 
 **Networking, without the pressure.**
 
-NameTag is a private, attendee-owned event copilot for people who find networking stressful or messy. It helps a person understand an unfamiliar room, share one focused public card, and follow through after the room clears.
+NameTags is a private, attendee-owned event copilot for people who find networking stressful or messy. It helps a person understand an unfamiliar room, share one focused public card, and follow through after the room clears.
 
 ## Live App
 
-[Open the current NameTag deployment](https://nametag-networking.vercel.app)
+[Open the current NameTags deployment](https://nametags-network.vercel.app)
 
 The fictional sample event is the fastest way to inspect the core flow without creating an account. Google sign-in becomes available only after its Supabase and Google Cloud provider configuration is complete; email/password and magic-link entry remain available as account alternatives.
 
@@ -18,11 +18,11 @@ Demo data is for review only; do not add personal links, private notes, or real 
 
 ## Product Flow
 
-1. **Before - Understand:** Sign in once, paste an event URL, type a short event name/date for live web research, write a description, or add a screenshot. NameTag turns that material into a grounded event brief; factual follow-up questions can refresh public web research, while private profile context is used only to tailor advice. A clearly labelled fictional sample event lets a reviewer try this without an account.
+1. **Before - Understand:** Sign in once, paste an event URL, type a short event name/date for live web research, write a description, or add a screenshot. NameTags turns that material into a grounded event brief; factual follow-up questions can refresh public web research, while private profile context is used only to tailor advice. A clearly labelled fictional sample event lets a reviewer try this without an account.
 2. **During - Show QR:** Choose the few public links that make sense for this room, then show one event-specific QR code. The scanner sees only those selected links, can save the card, and can explicitly opt in to share their own contact and conversation note.
 3. **After - Follow up:** Review people, private notes, follow-up drafts, and the next real action. Add people from paper cards or introductions, record promises, optionally confirm a person's relevant public context, then deliberately move each follow-up from to send to sent to done.
 
-NameTag is event-first, not profile-first. Your private profile and optional links live in your signed-in Settings workspace; each event creates a distinct public room pass. Links are normalized and format-validated, but v1 deliberately avoids social-account connections or ownership verification.
+NameTags is event-first, not profile-first. Your private profile and optional links live in your signed-in Settings workspace; each event creates a distinct public room pass. Links are normalized and format-validated, but v1 deliberately avoids social-account connections or ownership verification.
 
 ## Try The Core Loop
 
@@ -75,12 +75,12 @@ Without Supabase, the app uses `work/nametag-public-store.json` for a same-serve
 
 ## Add User Accounts And Cloud Workspaces
 
-NameTag's account layer uses Supabase Auth. It keeps the private owner workspace (profile, links, events, cards, notes, contacts, and follow-ups) in `public.user_workspaces`; scanner-facing cards and consented contact capture remain on the server-only path described above.
+NameTags' account layer uses Supabase Auth. It keeps the private owner workspace (profile, links, events, cards, notes, contacts, and follow-ups) in `public.user_workspaces`; scanner-facing cards and consented contact capture remain on the server-only path described above.
 
 1. Run the updated [`supabase/schema.sql`](./supabase/schema.sql) in the Supabase SQL editor. The statements are safe to re-run and add the `user_workspaces` table plus owner-only RLS policies.
 2. In Google Cloud, create an **OAuth client ID** for a **Web application**. Add exactly this Authorized redirect URI: `https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback`. If the OAuth consent screen is in Testing, add your own Google account as a test user.
 3. In **Supabase Authentication -> Providers**, open **Google**, enable it, paste that Google client ID and client secret, then save. A `provider is not enabled` error means this save step has not happened yet.
-4. In **Supabase Authentication -> URL Configuration**, set Site URL to `https://nametag-networking.vercel.app` and add that same URL to Redirect URLs.
+4. In **Supabase Authentication -> URL Configuration**, set Site URL to `https://nametags-network.vercel.app` and add that same URL to Redirect URLs.
 5. In **Supabase Settings -> API Keys**, copy the public `sb_publishable_...` key. Add these Vercel Production variables, then redeploy:
 
 ```bash
@@ -95,7 +95,7 @@ The login page also offers email magic links. For a production release, configur
 ## Privacy Boundaries
 
 - A public room pass contains only the links selected for that event. Hidden links never enter the public-card payload.
-- A scanner must actively provide their name/contact and consent before NameTag saves a connection. Consent is checked server-side and its timestamp is stored with the connection.
+- A scanner must actively provide their name/contact and consent before NameTags saves a connection. Consent is checked server-side and its timestamp is stored with the connection.
 - The server derives a scanner connection's event from the published QR card. A scanner cannot submit an arbitrary event ID to place themselves into another follow-up queue.
 - The public card `GET` response never includes scanner contacts. The owner app polls with a device-held, per-card sync key that is verified server-side.
 - An owner may explicitly check one contact's public context. That lookup receives only the name, event name, event goal, and an optional public-profile URL. A result is used in AI drafts only after the response confirms the identity and returns visible public sources.
@@ -109,20 +109,14 @@ Add these values to `.env.local`:
 
 ```bash
 OPENAI_API_KEY=your_key_here
-# Optional. Used by event research, prep, the interactive research chat, and
-# source-linked public context checks. Defaults to gpt-5.6 when omitted.
+# Optional. All model names default to gpt-5.6 when omitted.
 OPENAI_RESEARCH_MODEL=gpt-5.6
-# Optional. High-context follow-up synthesis defaults to GPT-5.6 as well.
 OPENAI_FOLLOWUP_MODEL=gpt-5.6
-# Optional. Fast research, chat, screenshot reading, and QR-card preparation
-# default to medium so the attendee can act while they are still on their way.
-OPENAI_FAST_REASONING_EFFORT=medium
-# Optional. The post-event follow-up plan defaults to high because it combines
-# several contacts and private notes. OPENAI_REASONING_EFFORT remains supported
-# as a legacy deep-quality override.
-OPENAI_DEEP_REASONING_EFFORT=high
-# Optional. Event screenshot reading defaults to OPENAI_RESEARCH_MODEL.
 OPENAI_VISION_MODEL=gpt-5.6
+# Medium keeps subway and in-room interactions responsive. High is reserved for
+# the multi-contact follow-up queue.
+OPENAI_FAST_REASONING_EFFORT=medium
+OPENAI_DEEP_REASONING_EFFORT=high
 ```
 
 `app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output, bounded server-side inputs, task-appropriate reasoning, and explicit answer-quality prompts. Subway and in-room interactions default to medium reasoning; the higher-context follow-up queue defaults to high. The model privately separates confirmed facts, attendee goal, specific outcome, and next action before it writes an answer. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API `web_search` tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title then triggers live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. `app/api/contact-research/route.ts` performs a separate, owner-triggered public identity check for a single follow-up; it never searches the contact's email, phone, private notes, or promise. The owner can open every captured source from the research section, chat answer, or confirmed contact context.
@@ -143,6 +137,7 @@ OPENAI_VISION_MODEL=gpt-5.6
 
 - [Build Week implementation record](./BUILD_WEEK.md)
 - [Submission copy, demo script, and reviewer path](./docs/BUILD_WEEK_SUBMISSION.md)
+- [GitHub publishing guide](./docs/GITHUB_PUBLISH.md)
 - [Current application specification](./docs/NAMETAG_APPLICATION_SPEC.md)
 - [Product brief](./docs/NAMETAG_PRODUCT_BRIEF.md)
 - [Architecture overview](./docs/NAMETAG_ARCHITECTURE_AND_PRODUCT_OVERVIEW.md)

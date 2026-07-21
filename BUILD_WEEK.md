@@ -1,8 +1,8 @@
-# NameTag Build Week
+# NameTags Build Week
 
 ## Product claim
 
-**NameTag turns event anxiety into one real next step.**
+**NameTags turns event anxiety into one real next step.**
 
 It is a private, attendee-owned event copilot for people who feel underprepared or anxious before networking. The product helps them understand the room, ask a useful question, share focused public links, and follow through on the conversations that mattered.
 
@@ -65,6 +65,14 @@ Before submitting, run one real two-device proof:
 4. A sees the connection in the follow-up queue, organizes the debrief, copies the draft, marks it sent, then marks it done.
 
 Record the actual result here after the test. Do not replace it with invented numbers.
+
+## Required Codex feedback evidence
+
+The primary development thread must generate this entry through Codex's `/feedback`
+command after most core functionality is complete. This value cannot be fabricated
+or inferred from git history.
+
+- **Primary Codex feedback session ID:** `PENDING — run /feedback in the primary NameTags development session before Devpost submission.`
 
 ## Deployment configuration
 
