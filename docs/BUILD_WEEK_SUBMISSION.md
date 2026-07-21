@@ -24,9 +24,9 @@ NameTags helps people enter unfamiliar events with less pressure. It researches 
 
 ## Inspiration
 
-I came to New York for a summer internship excited to meet people, but I kept arriving at events with the same quiet panic: I had not had time to understand what the event was really about, who might be there, or how to begin a conversation. As a non-native English speaker in an unfamiliar city, the pressure was not only "networking." It was having to research quickly, turn the context into a natural question, and remember every conversation afterward.
+I came to New York for a summer internship and was surprised by how social the city felt. I was suddenly seeing meetups, founder gatherings, and networking events everywhere. I did not understand how people could walk into a room full of strangers, already know what to talk about, and exchange the right information so naturally.
 
-I was switching between event pages, LinkedIn, notes, and different contact apps while commuting. At the event, I did not want to hand every person the same generic profile. Afterward, business cards and half-remembered promises became a follow-up task I kept postponing.
+For me, as a non-native English speaker in an unfamiliar city, the pressure was not only "networking." Before each event, I was switching between event pages, LinkedIn, notes, and different contact apps while commuting, trying to understand what the room was about and turn that context into a natural question. At the event, I did not want to hand every person the same generic profile. Afterward, business cards and half-remembered promises became a follow-up task I kept postponing.
 
 I built NameTags to make that whole sequence calmer: understand the room before entering, share one intentional QR card during it, and turn a real conversation into one clear next step afterward. Colleagues tried early versions, and their feedback pushed the product away from long generic advice toward a faster research conversation, a link-first room pass, and a simpler follow-up queue.
 
