@@ -32,10 +32,14 @@
 
 html {
   scroll-behavior: smooth;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
+  max-width: 100%;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
@@ -131,6 +135,10 @@ button:disabled {
 }
 
 @media (max-width: 1023px) {
+  .auth-shell {
+    overscroll-behavior-y: contain;
+  }
+
   .mobile-top-clearance {
     padding-top: calc(env(safe-area-inset-top) + 76px);
   }

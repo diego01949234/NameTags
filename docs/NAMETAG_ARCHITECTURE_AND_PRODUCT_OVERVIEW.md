@@ -76,7 +76,7 @@ The scanner-facing GET endpoint never returns contacts. The owner uses a per-car
 | `POST /api/generate` | Structured event brief and link recommendation | Strict JSON, grounded system instructions, deterministic fallback |
 | `POST /api/research-chat` | Context-aware follow-up questions | Bounded input and source context |
 | `POST /api/debrief` | Priority and follow-up draft | Editable output and deterministic fallback |
-| `GET/POST /api/public-card/[cardId]` | Read/publish public room pass | Public payload validation, owner sync key for publish |
+| `GET/POST/DELETE /api/public-card/[cardId]` | Read, publish, or unpublish a public room pass | Public payload validation; owner sync key protects publish and unpublish |
 | `GET/POST /api/public-card/[cardId]/contacts` | Owner sync / scanner opt-in | Explicit consent, honeypot, text bounds, rate-limit guard, server-derived event ID |
 
 ## Failure Behavior
@@ -90,7 +90,9 @@ The scanner-facing GET endpoint never returns contacts. The owner uses a per-car
 
 ```bash
 OPENAI_API_KEY=
-OPENAI_MODEL=gpt-5.6-terra
+OPENAI_RESEARCH_MODEL=gpt-5.6
+OPENAI_FOLLOWUP_MODEL=gpt-5.6
+OPENAI_REASONING_EFFORT=high
 
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SECRET_KEY=sb_secret_...

@@ -4,7 +4,7 @@
 
 **NameTag turns event anxiety into one real next step.**
 
-It is a mobile-first companion for people who feel underprepared or anxious before networking. The product helps them understand the room, ask a useful question, share focused public links, and follow through on the conversations that mattered.
+It is a private, attendee-owned event copilot for people who feel underprepared or anxious before networking. The product helps them understand the room, ask a useful question, share focused public links, and follow through on the conversations that mattered.
 
 ## This week's build scope
 

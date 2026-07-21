@@ -4,7 +4,7 @@
 
 - **Project:** NameTag
 - **Track:** Apps for Your Life
-- **One-line pitch:** NameTag turns event anxiety into one real next step.
+- **One-line pitch:** A private, attendee-owned event copilot that turns event anxiety into one real next step.
 - **Product line:** Networking, without the pressure.
 - **Live app:** https://nametag-networking.vercel.app
 - **Repository:** Add the public repository URL after pushing this project.
@@ -13,7 +13,7 @@
 
 ## Devpost Short Description
 
-NameTag is a mobile-first event companion for people who find networking stressful or messy. Paste an event URL, description, or screenshot to understand the room and ask useful questions. Choose the few public links that belong on one QR card. When someone scans, they can save the card or explicitly opt in to share their own contact and conversation note. After the event, NameTag keeps that context together and drafts a human-reviewed follow-up.
+NameTag is a private, attendee-owned event companion for people who find networking stressful or messy. Paste an event URL, description, or screenshot to understand the room and ask useful questions. Choose the few public links that belong on one QR card. When someone scans, they can save the card or explicitly opt in to share their own contact and conversation note. After the event, NameTag keeps that context together and drafts a human-reviewed follow-up.
 
 ## Devpost Long Description
 
@@ -30,7 +30,7 @@ The same event context follows the connection into the owner's private follow-up
 - Owner-only link recommendation and rationale.
 - Priority ranking and editable follow-up drafts.
 
-The server uses the OpenAI Responses API with `gpt-5.6-terra` by default. Deterministic fallbacks preserve the demo when an API key, provider, or event page is unavailable.
+The server uses the OpenAI Responses API with `gpt-5.6` by default and high reasoning for research and follow-up quality. Deterministic fallbacks preserve the demo when an API key, provider, or event page is unavailable.
 
 ## How Codex Is Used
 
@@ -52,7 +52,7 @@ Codex was used to build and iterate on the application: mobile-first flow, owner
 ## Reviewer Test Path
 
 1. Open the live app.
-2. Select **Explore a sample event** for a no-login evaluation path.
+2. Select **Run the 60-second demo** for a no-login evaluation path.
 3. Visit **Research**, ask a follow-up question, then go to **Links** and **QR**.
 4. Open the QR URL in another browser/device. Confirm it contains public links only.
 5. Use the scanner's **Share my details** control and explicit consent checkbox.

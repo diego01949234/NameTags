@@ -7,18 +7,11 @@ import { getSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 type AuthMode = "sign-in" | "sign-up" | "forgot-password" | "reset-password";
 
-// This is a deliberately public, fictional workspace for reviewers. It must
-// never contain personal links, private notes, or production user data.
-const demoAccount = {
-  email: "demo@nametag.app",
-  password: "NameTagDemo!2026"
-};
-
 const modeCopy: Record<AuthMode, { eyebrow: string; title: string; body: string }> = {
   "sign-in": {
-    eyebrow: "Your NameTag workspace",
-    title: "Welcome back.",
-    body: "Your rooms, QR cards, private notes, and follow-ups are waiting for you."
+    eyebrow: "A private, attendee-owned event copilot",
+    title: "Networking, without the pressure.",
+    body: "Understand the room, share only the links you choose, and leave with one useful next step."
   },
   "sign-up": {
     eyebrow: "Make this yours",
@@ -39,12 +32,10 @@ const modeCopy: Record<AuthMode, { eyebrow: string; title: string; body: string 
 
 export function AuthScreen({
   onTryDemo,
-  onDemoAccountOpened,
   initialMode = "sign-in",
   onPasswordUpdated
 }: {
   onTryDemo: () => void;
-  onDemoAccountOpened?: () => void;
   initialMode?: AuthMode;
   onPasswordUpdated?: () => void;
 }) {
@@ -132,13 +123,6 @@ export function AuthScreen({
     return true;
   }
 
-  async function signInAsDemo() {
-    setEmail(demoAccount.email);
-    setPassword(demoAccount.password);
-    const didSignIn = await signInWithCredentials(demoAccount.email, demoAccount.password);
-    if (didSignIn) onDemoAccountOpened?.();
-  }
-
   async function signUp(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const supabase = getSupabaseBrowserClient();
@@ -216,14 +200,14 @@ export function AuthScreen({
   }
 
   return (
-    <main className="min-h-screen bg-white lg:grid lg:grid-cols-[minmax(0,1fr)_470px] lg:bg-[#f7f8fa]">
+    <main className="min-h-screen overflow-x-hidden bg-white lg:grid lg:grid-cols-[minmax(0,1fr)_470px] lg:bg-[#f7f8fa]">
       <aside className="hidden border-r border-ink bg-ink px-10 py-10 text-white lg:flex lg:flex-col">
         <BrandMark inverse />
         <div className="my-auto max-w-[560px]">
-          <div className="app-kicker text-coral">One room at a time</div>
-          <h1 className="mt-3 text-[42px] font-bold leading-[48px]">Walk in knowing what to do next.</h1>
+          <div className="app-kicker text-coral">Private. Practical. Event-first.</div>
+          <h1 className="mt-3 text-[42px] font-bold leading-[48px]">Walk into an unfamiliar room with a plan.</h1>
           <p className="mt-4 max-w-[460px] text-base font-medium leading-7 text-white/68">
-            NameTag helps you understand an event, share one focused QR card, and follow through while the conversation is still fresh.
+            A private event copilot for people who find networking high-pressure: understand the room, share one focused QR card, and follow through while the conversation is still fresh.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3 border-t border-white/10 pt-5">
@@ -239,8 +223,8 @@ export function AuthScreen({
           ))}
         </div>
       </aside>
-      <section className="phone-frame auth-shell mx-auto flex min-h-[100dvh] w-full max-w-none flex-col overflow-hidden bg-white px-4 py-[calc(env(safe-area-inset-top)+1.5rem)] lg:min-h-screen lg:max-w-none lg:px-10 lg:py-10">
-        <div className="my-auto space-y-5 pb-8 lg:mx-auto lg:w-full lg:max-w-[360px]">
+      <section className="phone-frame auth-shell mx-auto flex min-h-[100dvh] w-full min-w-0 max-w-none flex-col overflow-x-hidden overflow-y-auto bg-white px-4 py-[calc(env(safe-area-inset-top)+1.5rem)] lg:min-h-screen lg:max-w-none lg:px-10 lg:py-10">
+        <div className="w-full min-w-0 space-y-4 pb-8 pt-2 lg:mx-auto lg:my-auto lg:max-w-[360px]">
           <div className="lg:hidden"><BrandMark /></div>
 
           <section className="overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm">
@@ -253,6 +237,28 @@ export function AuthScreen({
           </section>
 
           <section className="space-y-3 rounded-lg border border-line bg-white p-4 shadow-sm">
+            {mode === "sign-in" && (
+              <>
+                <button
+                  type="button"
+                  onClick={onTryDemo}
+                  disabled={isWorking}
+                  className="flex min-h-[76px] w-full items-center justify-between gap-3 rounded-lg border border-[#e9ad88] bg-[#fff0e5] px-3.5 py-3 text-left transition hover:border-[#c86b48] hover:bg-[#ffe2ce] disabled:cursor-not-allowed disabled:opacity-55"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-badge-mono text-[10px] font-black uppercase tracking-normal text-[#a6472b]">No account needed</span>
+                    <span className="mt-1 block text-base font-black text-[#5f2319]">Run the 60-second demo</span>
+                    <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#8e4128]">A fictional Founder Meetup is ready to explore.</span>
+                  </span>
+                  <ArrowRight className="size-5 shrink-0 text-[#a6472b]" />
+                </button>
+                <div className="flex items-center gap-3 py-1 text-[10px] font-black uppercase tracking-normal text-slate-soft">
+                  <span className="h-px flex-1 bg-line" />
+                  sign in to save your own events
+                  <span className="h-px flex-1 bg-line" />
+                </div>
+              </>
+            )}
             {showGoogle && (
               <>
                 <button
@@ -292,22 +298,6 @@ export function AuthScreen({
                   New to nametags? <span className="text-cobalt">Create an account</span>
                 </button>
               </form>
-            )}
-
-            {mode === "sign-in" && (
-              <button
-                type="button"
-                onClick={() => void signInAsDemo()}
-                disabled={isWorking}
-                className="flex w-full items-center justify-between gap-3 rounded-lg border border-[#e9ad88] bg-[#fff0e5] px-3 py-3 text-left transition hover:border-[#c86b48] hover:bg-[#ffe2ce] disabled:cursor-not-allowed disabled:opacity-55"
-              >
-                <span>
-                  <span className="block font-badge-mono text-[10px] font-black uppercase tracking-normal text-[#a6472b]">Build Week reviewer</span>
-                  <span className="mt-1 block text-sm font-black text-[#5f2319]">Open the demo account</span>
-                  <span className="mt-0.5 block text-xs font-semibold leading-5 text-[#8e4128]">A prepared fictional workspace. No setup needed.</span>
-                </span>
-                {isWorking ? <Loader2 className="size-4 shrink-0 animate-spin text-[#a6472b]" /> : <ArrowRight className="size-4 shrink-0 text-[#a6472b]" />}
-              </button>
             )}
 
             {mode === "sign-up" && (
@@ -366,17 +356,6 @@ export function AuthScreen({
             {error && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-700">{error}</p>}
           </section>
 
-          {mode !== "reset-password" && (
-            <button
-              type="button"
-              onClick={onTryDemo}
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-wash px-4 text-sm font-bold text-ink transition hover:border-ink hover:bg-white"
-            >
-              Explore a sample event
-              <ArrowRight className="size-4" />
-            </button>
-          )}
-
           <div className="flex items-start gap-2 px-1 text-xs font-semibold leading-5 text-slate-soft">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-teal-700" />
             <p>Your private workspace is never shown on a QR card.</p>
@@ -389,7 +368,7 @@ export function AuthScreen({
 
 function readableAuthError(message: string) {
   if (/unsupported provider|provider is not enabled/i.test(message)) {
-    return "Google sign-in is not enabled in this NameTag Supabase project yet. Use email and password, a sign-in link, or the demo for now.";
+    return "Google sign-in is not enabled in this NameTag Supabase project yet. Use email and password, a sign-in link, or run the no-account demo for now.";
   }
   if (/invalid login credentials/i.test(message)) {
     return "That email or password does not match an account.";

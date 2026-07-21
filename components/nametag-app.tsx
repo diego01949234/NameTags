@@ -890,9 +890,9 @@ export function NametagApp() {
 
   if (authConfigured && !authReady) return <AccountLoadingScreen />;
   if (authConfigured && passwordRecoveryMode && session) {
-    return <AuthScreen onTryDemo={startDemoEvent} onDemoAccountOpened={startDemoEvent} initialMode="reset-password" onPasswordUpdated={() => setPasswordRecoveryMode(false)} />;
+    return <AuthScreen onTryDemo={startDemoEvent} initialMode="reset-password" onPasswordUpdated={() => setPasswordRecoveryMode(false)} />;
   }
-  if (authConfigured && !session && !demoMode) return <AuthScreen onTryDemo={startDemoEvent} onDemoAccountOpened={startDemoEvent} />;
+  if (authConfigured && !session && !demoMode) return <AuthScreen onTryDemo={startDemoEvent} />;
   if (authConfigured && session && !demoMode && !cloudReady) return <AccountLoadingScreen />;
 
   function addEventNote(body: string) {
@@ -1038,7 +1038,7 @@ export function NametagApp() {
                   startNewEvent={startNewEvent}
                   startDemoEvent={startDemoEvent}
                   removeSampleEvents={removeSampleEvents}
-                  canRemoveSampleEvents={!demoMode && session?.user.email !== "demo@nametag.app"}
+                  canRemoveSampleEvents={!demoMode}
                   onDeleteEvent={requestEventDeletion}
                 />
               )}
