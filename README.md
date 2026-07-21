@@ -6,6 +6,19 @@ NameTags is a private event copilot for people who want to feel prepared before 
 
 [Open the live app](https://nametags-network.vercel.app)
 
+## Built with Codex + GPT-5.6
+
+NameTags is an AI-native product, not a static QR profile. **GPT-5.6 runs inside the live application** where event context needs reasoning. **Codex was the development partner used to build and iterate the product end to end**, from the first product flow through the deployed Next.js application.
+
+| Where | What OpenAI enables |
+| --- | --- |
+| Event research | GPT-5.6 turns an event URL, description, screenshot, or public research into a structured understanding of the room. |
+| Research chat | GPT-5.6 answers the user's specific question, then connects the answer to their personal networking goal. |
+| Room pass | GPT-5.6 recommends which links fit this event and explains the recommendation privately to the owner. |
+| Follow-up | GPT-5.6 turns consented contact details, conversation notes, promises, and event context into a human-editable next action. |
+
+Codex accelerated every major build loop: product framing, UI/UX iteration, Next.js and TypeScript implementation, Supabase Auth and Row Level Security, server-side QR and consent routes, AI prompt design, debugging, testing, deployment preparation, and repository hygiene. The founder made the product decisions; Codex helped turn them into a working application quickly.
+
 ## Why NameTags Exists
 
 I came to New York for a summer internship and was surprised by how social the city felt. Meetups, founder gatherings, and networking events were everywhere. As a non-native English speaker in a new city, I did not understand how people could walk into a room full of strangers, know what to say, exchange the right information naturally, and remember every conversation afterward.
@@ -62,7 +75,7 @@ Run [`supabase/schema.sql`](./supabase/schema.sql) once in the Supabase SQL edit
 
 Never commit `.env.local`, an OpenAI API key, a Supabase `sb_secret_...` key, or a database password. The included `.gitignore` excludes local environment files and deployment credentials.
 
-## GPT-5.6 in NameTags
+## How GPT-5.6 Works in NameTags
 
 GPT-5.6 is used server-side to:
 
@@ -71,11 +84,13 @@ GPT-5.6 is used server-side to:
 - recommend which links belong on a room pass and explain the recommendation privately;
 - organize consented contacts, notes, promises, and an editable follow-up draft.
 
-The app uses source-aware prompts, bounded inputs, and a deterministic fallback when AI or source retrieval is unavailable. It does not invent speakers or attendees when a source does not support them.
+These calls run server-side through the OpenAI Responses API. The app uses source-aware prompts, bounded inputs, task-specific reasoning levels, and a deterministic fallback when AI or source retrieval is unavailable. It does not invent speakers or attendees when a source does not support them.
 
-## Built With Codex
+## How Codex Was Used
 
-Codex was used throughout implementation to build and refine the Next.js application, mobile and desktop flows, Supabase-backed persistence and privacy boundaries, QR sharing, AI routes, and product UI. It also assisted with debugging, type-checking, deployment preparation, and repository hygiene.
+Codex was used as the primary development partner throughout the build. It helped translate the founder's networking experience into product requirements, implement the full-stack application, refine the mobile-first and desktop UI, connect authentication and persistence, build privacy-aware public card flows, and harden the product through debugging and verification.
+
+The work was iterative rather than one-shot. Codex helped make changes as early feedback revealed unclear steps, excessive information, and generic AI output. That iteration led to a product centered on three clear moments: understand the room, share the right card, and follow through.
 
 ## Stack
 
