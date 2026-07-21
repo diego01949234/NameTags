@@ -1,13 +1,13 @@
 # NameTags Product Film
 
-This folder contains two code-made NameTags videos. The original 65 second product film is a high-motion software piece. The current live demo is a 90 second, landscape SaaS walkthrough using real NameTags screens inside a portrait phone frame. It is intentionally code-made rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
+This folder contains two code-made NameTags videos. The original 65 second product film is a high-motion software piece. The current live demo is a 100 second, landscape SaaS walkthrough using real NameTags screens inside a portrait phone frame. It is intentionally code-made rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
 
 ## Compositions
 
 - `NameTagsFilmPreview`: 1920x1080, 24fps. Use this for review and quick revisions.
 - `NameTagsFilm`: 3840x2160, 60fps. Use this for the final 4K export.
-- `NameTagsLiveDemoPreview`: 1920x1080, 30fps, 90 seconds. The landscape live mobile demo.
-- `NameTagsLiveDemo`: 3840x2160, 60fps, 90 seconds. The 4K live mobile demo.
+- `NameTagsLiveDemoPreview`: 1920x1080, 30fps, 100 seconds. The landscape live mobile demo.
+- `NameTagsLiveDemo`: 3840x2160, 60fps, 100 seconds. The 4K live mobile demo.
 
 ## Commands
 

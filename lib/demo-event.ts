@@ -12,7 +12,7 @@ export function createDemoWorkspace(existingProfile: UserProfile): DemoWorkspace
     id: existingProfile.id === "user_local" ? "demo_owner" : existingProfile.id,
     // The reviewer route is intentionally a named fictional product persona,
     // rather than a claim of employment or affiliation with OpenAI.
-    name: "Annie Wu",
+    name: "Diego Wu",
     headline: "Founder, NameTags · OpenAI Build Week builder",
     defaultBio: "Building calmer ways for people to walk into unfamiliar rooms and leave with a real next step.",
     networkingRole: "builder"
@@ -24,7 +24,7 @@ export function createDemoWorkspace(existingProfile: UserProfile): DemoWorkspace
     label: "See the prototype",
     type: "demo",
     url: "https://example.com/nametag-demo",
-    note: "A short demo of the product Annie is testing."
+    note: "A short demo of the product Diego is testing."
   };
   const linkedinLink: UserLink = {
     id: makeId("demo_link"),
@@ -98,7 +98,7 @@ export function createDemoWorkspace(existingProfile: UserProfile): DemoWorkspace
         "I am testing a tool for people who feel unprepared at events. Does that sound familiar to you?"
       ],
       intro:
-        "Hi, I am Annie. I am testing a calmer way for people to prepare for events and actually follow up afterward. What are you working on right now?",
+        "Hi, I am Diego. I am testing a calmer way for people to prepare for events and actually follow up afterward. What are you working on right now?",
       shortPitch:
         "I have noticed that many people arrive at meetups knowing they should network but not knowing how to begin, what to share, or how to keep track of the conversations that mattered. I am building NameTag to turn that anxious moment into one clear next step: understand the room, use a natural opening, share one focused card, and leave with a follow-up that has real context. I am looking for people who have felt that problem themselves and can tell me where the flow still feels awkward.",
       recommendedGoal: "Find one collaborator or feedback partner who understands early product experiments.",

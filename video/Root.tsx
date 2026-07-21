@@ -3,7 +3,7 @@ import { NameTagsLiveDemo } from "./NameTagsLiveDemo";
 import { NameTagsFilmV2 } from "./NameTagsFilmV2";
 
 const FILM_SECONDS = 65;
-const LIVE_DEMO_SECONDS = 90;
+const LIVE_DEMO_SECONDS = 100;
 
 export const RemotionRoot = () => {
   return (
