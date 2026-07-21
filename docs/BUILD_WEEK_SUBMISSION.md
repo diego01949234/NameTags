@@ -24,9 +24,11 @@ NameTags helps people enter unfamiliar events with less pressure. It researches 
 
 ## Inspiration
 
-Networking usually fails in three small, human moments. Before an event, people are often on the way there with no time to understand the agenda, the room, or how to begin. During the event, exchanging the right contact method is awkward and inconsistent. Afterward, names, notes, and promises dissolve before a follow-up happens.
+I came to New York for a summer internship excited to meet people, but I kept arriving at events with the same quiet panic: I had not had time to understand what the event was really about, who might be there, or how to begin a conversation. As a non-native English speaker in an unfamiliar city, the pressure was not only "networking." It was having to research quickly, turn the context into a natural question, and remember every conversation afterward.
 
-NameTags was built to turn that anxious, fragmented sequence into one calm workflow: understand the room, share one intentional card, and take the next step while the context is still fresh.
+I was switching between event pages, LinkedIn, notes, and different contact apps while commuting. At the event, I did not want to hand every person the same generic profile. Afterward, business cards and half-remembered promises became a follow-up task I kept postponing.
+
+I built NameTags to make that whole sequence calmer: understand the room before entering, share one intentional QR card during it, and turn a real conversation into one clear next step afterward. Colleagues tried early versions, and their feedback pushed the product away from long generic advice toward a faster research conversation, a link-first room pass, and a simpler follow-up queue.
 
 ## What It Does
 
@@ -70,7 +72,7 @@ Fast, attendee-facing research defaults to medium reasoning so the person can ac
 
 ## How Codex Was Used
 
-Codex accelerated implementation and iteration across the actual codebase: the mobile-first event flow, account-first workspace, Supabase RLS integration, server-side public QR boundaries, explicit scanner consent, contextual follow-up queue, UI refinement, motion design, verification, README, and this submission package.
+I used Codex as a build partner to turn my own New York networking pain point into a working application. It accelerated implementation and iteration across the actual codebase: the mobile-first event flow, account-first workspace, Supabase RLS integration, server-side public QR boundaries, explicit scanner consent, contextual follow-up queue, UI refinement, motion design, verification, README, and this submission package.
 
 The git history and Build Week record are the evidence trail. This project does not claim fabricated users, metrics, or tests.
 
@@ -84,15 +86,16 @@ The git history and Build Week record are the evidence trail. This project does 
 
 ## Accomplishments We Are Proud Of
 
-- A coherent before / during / after loop instead of three disconnected AI features.
+- Turning a personal, non-native-speaker networking problem into a coherent before / during / after loop instead of three disconnected AI features.
+- Iterating early flows with colleague feedback until the product centered on quick research, an intentional link-first room pass, and a follow-up queue that makes the next action obvious.
 - A no-login fictional sample event so a reviewer can explore the core journey immediately without shared credentials or personal data.
 - A visible owner/scanner privacy boundary: one event-specific QR card contains only selected public links.
 - A practical follow-up system that carries a conversation's context forward, but keeps the human in control of outreach.
 - A real Supabase-backed account and consent architecture alongside deterministic local fallbacks for a reliable demo.
 
-## What We Learned
+## What I Learned
 
-The useful AI moment is not a long networking essay. It is a small, timely answer that helps someone understand the room or choose the next sentence. We also learned that privacy must be a product surface: the owner needs to see exactly what a scanner will see, and the scanner needs a real choice about whether to share anything back.
+The useful AI moment is not a long networking essay. It is a small, timely answer that helps someone understand the room or choose the next sentence when they are already on the subway or outside the venue. I also learned that privacy must be a product surface: the owner needs to see exactly what a scanner will see, and the scanner needs a real choice about whether to share anything back.
 
 ## What's Next
 
@@ -117,7 +120,7 @@ For a full cross-device proof, use the deployed environment with Supabase server
 
 | Time | What to show | Voiceover point |
 | --- | --- | --- |
-| 0:00-0:10 | Motion title: “Networking should not begin with panic.” | “The problem is not only meeting people. It is arriving unprepared, sharing the wrong information, and losing the follow-up.” |
+| 0:00-0:10 | Motion title: “Networking should not begin with panic.” | “I came to New York for a summer internship. As a non-native English speaker in a new city, I kept arriving at events excited but unprepared.” |
 | 0:10-0:40 | Real mobile recording: add event source and Research | “I can paste an invite, screenshot, or rough note. NameTags helps me understand this particular room and is clear about what the sources do not confirm.” |
 | 0:40-1:00 | Research chat | “Instead of generic networking advice, I ask the exact question I have while I am on the way there.” |
 | 1:00-1:25 | Links review and scanner preview | “For this event, I choose the links that should travel. Private links and the AI reasoning stay in my workspace.” |
