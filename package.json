@@ -1,5 +1,5 @@
 {
-  "name": "nametag-build-week",
+  "name": "nametags",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,14 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "video:studio": "remotion studio video/index.ts",
-    "video:preview": "remotion render video/index.ts NameTagsFilmPreview out/nametags-65s-preview.mp4 --codec=h264 --crf=18",
-    "video:4k": "remotion render video/index.ts NameTagsFilm out/nametags-65s-4k60.mp4 --codec=h264 --crf=18",
-    "video:demo": "remotion render video/index.ts NameTagsLiveDemoPreview out/nametags-live-demo-100s.mp4 --codec=h264 --crf=18 --concurrency=4",
-    "video:demo:4k": "remotion render video/index.ts NameTagsLiveDemo out/nametags-live-demo-100s-4k60.mp4 --codec=h264 --crf=18 --concurrency=2",
-    "video:titles": "remotion render video/index.ts NameTagsMotionTitlesPreview out/nametags-motion-titles-45s.mp4 --codec=h264 --crf=18 --concurrency=4",
-    "video:titles:4k": "remotion render video/index.ts NameTagsMotionTitles out/nametags-motion-titles-45s-4k60.mp4 --codec=h264 --crf=18 --concurrency=2"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.7",
@@ -26,15 +19,11 @@
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@remotion/cli": "^4.0.495",
-    "@remotion/google-fonts": "^4.0.495",
-    "@remotion/renderer": "^4.0.495",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.10.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "playwright": "^1.61.1",
-    "remotion": "^4.0.495",
     "tailwindcss": "^4.1.18",
     "typescript": "^5.8.3"
   }
