@@ -5,6 +5,7 @@
 NameTags is a private event copilot for people who want to feel prepared before a networking event, share the right links during it, and follow up while the conversation is still fresh.
 
 [Open the live app](https://nametags-network.vercel.app)
+[landing page](https://nametags-network.vercel.app/landing) 
 
 ## Built with Codex + GPT-5.6
 
