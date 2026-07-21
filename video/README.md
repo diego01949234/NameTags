@@ -1,10 +1,10 @@
 # NameTags Product Film
 
-This folder contains a code-made 50 second NameTags product film. It is intentionally a clean SaaS motion piece rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
+This folder contains a code-made 65 second NameTags product film. The current film is a high-motion software piece: white `N` on coral, event-card rain, a fast research orbit, a QR Room Pass hero, a three-step pain-to-solution map, and a handoff into a live product demo. It is intentionally code-made rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
 
 ## Compositions
 
-- `NameTagsFilmPreview`: 1920x1080, 30fps. Use this for review and quick revisions.
+- `NameTagsFilmPreview`: 1920x1080, 24fps. Use this for review and quick revisions.
 - `NameTagsFilm`: 3840x2160, 60fps. Use this for the final 4K export.
 
 ## Commands
@@ -19,12 +19,13 @@ Renders are written to the Git-ignored `out/` folder.
 
 ## Story
 
-1. Event inputs converge into one calm starting point.
-2. Subway Mode turns an event source into a useful research brief.
-3. Questions become natural, contextual conversation starters.
-4. A link vault becomes an event-specific QR Room Pass.
-5. A scanner sees a simple public card and chooses whether to share contact details.
-6. The same event context becomes an editable follow-up queue.
-7. NameTags closes on `Networking, without the pressure.`
+1. A rain of cards, mail, social and chat links makes the networking overload tangible.
+2. A moving desk scene turns anxiety and tabs into a focused mobile moment.
+3. Floating event fragments orbit and then converge around a single source of truth.
+4. Cards are pulled into NameTags and become one practical event plan.
+5. Subway Mode resolves a source into tailored questions.
+6. A real QR Room Pass gets the main hero moment.
+7. Research, the pass, and a follow-up queue become a clear `Before / During / After` pain-to-solution map.
+8. The final slate hands directly into a live product demo.
 
 The only QR target is `https://nametags-network.vercel.app`; change `PRODUCTION_URL` in `NameTagsFilm.tsx` if the production URL changes.
