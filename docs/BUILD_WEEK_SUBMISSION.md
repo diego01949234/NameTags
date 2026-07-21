@@ -14,7 +14,7 @@ personal pass.
 - **Tagline:** Networking, without the pressure.
 - **One-line pitch:** A private, attendee-owned event copilot that turns event anxiety into one real next step.
 - **Live app:** https://nametags-network.vercel.app
-- **Repository:** `PENDING — add the public GitHub URL after publishing.`
+- **Repository:** https://github.com/diego01949234/NameTags
 - **Demo video:** `PENDING — add the public YouTube URL after upload.`
 - **Primary Codex feedback session ID:** `PENDING — generate through /feedback in the primary development session.`
 
