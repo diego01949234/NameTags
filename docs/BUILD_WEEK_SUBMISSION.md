@@ -1,7 +1,11 @@
 # NameTags Devpost Submission Pack
 
-Everything below is written in English and can be copied into the relevant
-Devpost fields. Replace only the values marked `PENDING` before submitting.
+Everything below is written in English as a submission outline. Before posting,
+personally rewrite the **Inspiration**, **Challenges**, **Accomplishments**, and
+**What We Learned** sections in the project owner's real voice. The official
+Build Week guidance explicitly warns against submitting AI-written project
+descriptions unchanged. Replace only the values marked `PENDING` after that
+personal pass.
 
 ## Submission Identity
 
