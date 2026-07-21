@@ -1,5 +1,6 @@
 import type { ContactPublicResearch, ContactResearchRequest, ResearchSource } from "@/lib/types";
 import { sanitizeContactResearchRequest } from "@/lib/server/ai-input";
+import { getFastReasoningEffort } from "@/lib/server/openai-config";
 import { rateLimitRequest } from "@/lib/server/request-rate-limit";
 
 const MAX_SUMMARY_LENGTH = 700;
@@ -48,7 +49,7 @@ async function researchPublicContact(payload: ContactResearchRequest): Promise<C
     },
     body: JSON.stringify({
       model: process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6",
-      reasoning: { effort: process.env.OPENAI_REASONING_EFFORT ?? "high" },
+      reasoning: { effort: getFastReasoningEffort() },
       tools: [{ type: "web_search" }],
       tool_choice: "required",
       include: ["web_search_call.action.sources"],

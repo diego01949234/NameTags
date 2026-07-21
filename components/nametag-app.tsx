@@ -2545,8 +2545,9 @@ function PrepScreen({
 
       <PrimaryButton type="submit" disabled={isGenerating}>
         {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <ClipboardList className="size-4" />}
-        Research this event
+        {isGenerating ? "Preparing your room..." : "Research this event"}
       </PrimaryButton>
+      {isGenerating && <ResearchProgress kind="event" />}
       {generationError && (
         <p role="alert" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold leading-5 text-red-700">
           {generationError}
@@ -3346,6 +3347,8 @@ function ResearchChat({
           </div>
         )}
 
+        {isThinking && <ResearchProgress kind="question" compact />}
+
         <form onSubmit={submitQuestion} className="flex items-end gap-2">
           <textarea
             className={`${inputClass} min-h-11 flex-1 resize-none py-2.5`}
@@ -3386,6 +3389,68 @@ function ResearchChat({
         )}
       </div>
     </section>
+  );
+}
+
+type ResearchProgressKind = "event" | "question";
+
+function ResearchProgress({
+  kind,
+  compact = false
+}: {
+  kind: ResearchProgressKind;
+  compact?: boolean;
+}) {
+  const stages =
+    kind === "event"
+      ? [
+          "Reading the event material",
+          "Aligning it with your goal",
+          "Preparing questions and QR choices"
+        ]
+      : [
+          "Reading your question",
+          "Checking the event context",
+          "Turning it into one practical next move"
+        ];
+  const [activeStage, setActiveStage] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setActiveStage((current) => (current + 1) % stages.length);
+    }, 1400);
+    return () => window.clearInterval(interval);
+  }, [stages.length]);
+
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className={`rounded-lg border border-cobalt/20 bg-cobalt/5 ${compact ? "px-3 py-2.5" : "px-3 py-3"}`}
+    >
+      <div className="flex items-center gap-2.5">
+        <span className="relative grid size-7 shrink-0 place-items-center rounded-full bg-white text-cobalt shadow-sm">
+          <span className="absolute inset-0 rounded-full bg-cobalt/20 animate-ping motion-reduce:animate-none" />
+          <Loader2 className="relative size-3.5 animate-spin motion-reduce:animate-none" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-xs font-black text-ink">{kind === "event" ? "Researching your room" : "Thinking with your event context"}</p>
+          <p className="mt-0.5 text-xs font-semibold text-slate-600">{stages[activeStage]}</p>
+        </div>
+      </div>
+      {!compact && (
+        <div className="mt-3 flex gap-1.5" aria-hidden="true">
+          {stages.map((stage, index) => (
+            <span
+              key={stage}
+              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                index === activeStage ? "bg-cobalt" : "bg-cobalt/15"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

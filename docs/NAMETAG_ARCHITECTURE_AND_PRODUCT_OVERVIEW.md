@@ -92,7 +92,8 @@ The scanner-facing GET endpoint never returns contacts. The owner uses a per-car
 OPENAI_API_KEY=
 OPENAI_RESEARCH_MODEL=gpt-5.6
 OPENAI_FOLLOWUP_MODEL=gpt-5.6
-OPENAI_REASONING_EFFORT=high
+OPENAI_FAST_REASONING_EFFORT=medium
+OPENAI_DEEP_REASONING_EFFORT=high
 
 SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 SUPABASE_SECRET_KEY=sb_secret_...

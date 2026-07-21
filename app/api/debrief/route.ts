@@ -1,5 +1,6 @@
 import type { Contact, EventDebriefRequest, EventDebriefResult } from "@/lib/types";
 import { sanitizeDebriefRequest } from "@/lib/server/ai-input";
+import { getDeepReasoningEffort } from "@/lib/server/openai-config";
 import { rateLimitRequest } from "@/lib/server/request-rate-limit";
 
 const maxContacts = 40;
@@ -90,7 +91,7 @@ async function organizeWithOpenAI(payload: EventDebriefRequest): Promise<EventDe
       // Follow-up is a quality-critical, high-context task. Keep it on the
       // research-capable model unless a deployment explicitly overrides it.
       model: process.env.OPENAI_FOLLOWUP_MODEL ?? process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6",
-      reasoning: { effort: process.env.OPENAI_REASONING_EFFORT ?? "high" },
+      reasoning: { effort: getDeepReasoningEffort() },
       input: [
         {
           role: "system",

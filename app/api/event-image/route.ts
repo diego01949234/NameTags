@@ -1,4 +1,5 @@
 import { rateLimitRequest } from "@/lib/server/request-rate-limit";
+import { getFastReasoningEffort } from "@/lib/server/openai-config";
 
 export const runtime = "nodejs";
 
@@ -108,7 +109,7 @@ async function extractEventDetails(imageDataUrl: string): Promise<ExtractedEvent
       // Vision uses the stronger research model by default so a poster can become
       // reliable event context before the web-research step begins.
       model: process.env.OPENAI_VISION_MODEL ?? process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6",
-      reasoning: { effort: process.env.OPENAI_REASONING_EFFORT ?? "high" },
+      reasoning: { effort: getFastReasoningEffort() },
       input: [
         {
           role: "system",

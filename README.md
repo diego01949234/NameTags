@@ -114,14 +114,18 @@ OPENAI_API_KEY=your_key_here
 OPENAI_RESEARCH_MODEL=gpt-5.6
 # Optional. High-context follow-up synthesis defaults to GPT-5.6 as well.
 OPENAI_FOLLOWUP_MODEL=gpt-5.6
-# Optional. Defaults to high so research and follow-up quality win over a small
-# latency saving. Set only after evaluating a different tradeoff.
-OPENAI_REASONING_EFFORT=high
+# Optional. Fast research, chat, screenshot reading, and QR-card preparation
+# default to medium so the attendee can act while they are still on their way.
+OPENAI_FAST_REASONING_EFFORT=medium
+# Optional. The post-event follow-up plan defaults to high because it combines
+# several contacts and private notes. OPENAI_REASONING_EFFORT remains supported
+# as a legacy deep-quality override.
+OPENAI_DEEP_REASONING_EFFORT=high
 # Optional. Event screenshot reading defaults to OPENAI_RESEARCH_MODEL.
 OPENAI_VISION_MODEL=gpt-5.6
 ```
 
-`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output, bounded server-side inputs, high reasoning, and explicit answer-quality prompts. The model privately separates confirmed facts, attendee goal, specific outcome, and next action before it writes an answer. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API `web_search` tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title then triggers live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. `app/api/contact-research/route.ts` performs a separate, owner-triggered public identity check for a single follow-up; it never searches the contact's email, phone, private notes, or promise. The owner can open every captured source from the research section, chat answer, or confirmed contact context.
+`app/api/generate/route.ts`, `app/api/research-chat/route.ts`, and `app/api/debrief/route.ts` use strict JSON output, bounded server-side inputs, task-appropriate reasoning, and explicit answer-quality prompts. Subway and in-room interactions default to medium reasoning; the higher-context follow-up queue defaults to high. The model privately separates confirmed facts, attendee goal, specific outcome, and next action before it writes an answer. `app/api/brief/route.ts` reads public event pages and, for short natural-language event searches, uses the Responses API `web_search` tool with visible source links. Uploaded event screenshots are read with `input_image`; their recognized event title then triggers live web research when it is specific enough. `app/api/research-chat/route.ts` uses a privacy-separated lookup: public event context is searched first, then the resulting facts are privately tailored using the attendee profile. `app/api/contact-research/route.ts` performs a separate, owner-triggered public identity check for a single follow-up; it never searches the contact's email, phone, private notes, or promise. The owner can open every captured source from the research section, chat answer, or confirmed contact context.
 
 ## Key Screens
 

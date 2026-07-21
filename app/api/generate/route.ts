@@ -1,5 +1,6 @@
 import { generateMockNametag } from "@/lib/mock-ai";
 import { sanitizeGenerationRequest } from "@/lib/server/ai-input";
+import { getFastReasoningEffort } from "@/lib/server/openai-config";
 import { rateLimitRequest } from "@/lib/server/request-rate-limit";
 import type { GenerationRequest, GenerationResult } from "@/lib/types";
 
@@ -129,7 +130,7 @@ async function generateWithOpenAI(payload: GenerationRequest): Promise<Generatio
       // The prep brief is the product's core research moment. Use the same
       // research-capable model as live lookup so synthesis does not dilute it.
       model: process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6",
-      reasoning: { effort: process.env.OPENAI_REASONING_EFFORT ?? "high" },
+      reasoning: { effort: getFastReasoningEffort() },
       input: [
         {
           role: "system",

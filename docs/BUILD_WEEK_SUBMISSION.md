@@ -30,7 +30,7 @@ The same event context follows the connection into the owner's private follow-up
 - Owner-only link recommendation and rationale.
 - Priority ranking and editable follow-up drafts.
 
-The server uses the OpenAI Responses API with `gpt-5.6` by default and high reasoning for research and follow-up quality. Deterministic fallbacks preserve the demo when an API key, provider, or event page is unavailable.
+The server uses the OpenAI Responses API with `gpt-5.6` by default: medium reasoning for time-sensitive event research and in-room chat, and high reasoning for the multi-contact follow-up queue. Deterministic fallbacks preserve the demo when an API key, provider, or event page is unavailable.
 
 ## How Codex Is Used
 

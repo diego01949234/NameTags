@@ -1,4 +1,5 @@
 import { rateLimitRequest } from "@/lib/server/request-rate-limit";
+import { getFastReasoningEffort } from "@/lib/server/openai-config";
 import type { ResearchSource } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -180,7 +181,7 @@ async function searchEventWithOpenAI(query: string): Promise<WebResearchResult> 
     body: JSON.stringify({
       // Live web search is intentionally stronger than the quick card-generation model.
       model: process.env.OPENAI_RESEARCH_MODEL ?? "gpt-5.6",
-      reasoning: { effort: process.env.OPENAI_REASONING_EFFORT ?? "high" },
+      reasoning: { effort: getFastReasoningEffort() },
       tools: [{ type: "web_search" }],
       tool_choice: "required",
       include: ["web_search_call.action.sources"],
