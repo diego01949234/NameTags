@@ -10,12 +10,12 @@ export function createDemoWorkspace(existingProfile: UserProfile): DemoWorkspace
   const profile: UserProfile = {
     ...existingProfile,
     id: existingProfile.id === "user_local" ? "demo_owner" : existingProfile.id,
-    name: existingProfile.name.trim() || "Annie",
-    headline: existingProfile.headline.trim() || "Product builder",
-    defaultBio:
-      existingProfile.defaultBio.trim() ||
-      "Building calmer ways for people to walk into unfamiliar rooms and leave with a real next step.",
-    networkingRole: existingProfile.networkingRole || "builder"
+    // The reviewer route is intentionally a named fictional product persona,
+    // rather than a claim of employment or affiliation with OpenAI.
+    name: "Annie Wu",
+    headline: "Founder, NameTags · OpenAI Build Week builder",
+    defaultBio: "Building calmer ways for people to walk into unfamiliar rooms and leave with a real next step.",
+    networkingRole: "builder"
   };
 
   const prototypeLink: UserLink = {

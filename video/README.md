@@ -1,11 +1,13 @@
 # NameTags Product Film
 
-This folder contains a code-made 65 second NameTags product film. The current film is a high-motion software piece: white `N` on coral, event-card rain, a fast research orbit, a QR Room Pass hero, a three-step pain-to-solution map, and a handoff into a live product demo. It is intentionally code-made rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
+This folder contains two code-made NameTags videos. The original 65 second product film is a high-motion software piece. The current live demo is a 90 second, landscape SaaS walkthrough using real NameTags screens inside a portrait phone frame. It is intentionally code-made rather than AI-generated footage: the QR is real, typography is selectable, and every colour is part of the NameTags system.
 
 ## Compositions
 
 - `NameTagsFilmPreview`: 1920x1080, 24fps. Use this for review and quick revisions.
 - `NameTagsFilm`: 3840x2160, 60fps. Use this for the final 4K export.
+- `NameTagsLiveDemoPreview`: 1920x1080, 30fps, 90 seconds. The landscape live mobile demo.
+- `NameTagsLiveDemo`: 3840x2160, 60fps, 90 seconds. The 4K live mobile demo.
 
 ## Commands
 
@@ -13,6 +15,8 @@ This folder contains a code-made 65 second NameTags product film. The current fi
 npm run video:studio
 npm run video:preview
 npm run video:4k
+npm run video:demo
+npm run video:demo:4k
 ```
 
 Renders are written to the Git-ignored `out/` folder.
@@ -29,3 +33,15 @@ Renders are written to the Git-ignored `out/` folder.
 8. The final slate hands directly into a live product demo.
 
 The only QR target is `https://nametags-network.vercel.app`; change `PRODUCTION_URL` in `NameTagsFilm.tsx` if the production URL changes.
+
+## Live demo story
+
+1. Open a real event in the mobile app.
+2. Scroll the real research screen, with subtitles explaining Subway Mode.
+3. Zoom into the actual selected-link and scanner-preview controls.
+4. Use the real QR Room Pass and scan animation.
+5. Scroll the real follow-up queue and highlight the editable AI draft.
+
+The source screens live in `public/video-demo/`; they were captured from the
+working local NameTags app. `nametags-live-demo.srt` is the matching subtitle
+file for editors.
