@@ -17,6 +17,7 @@ import {
   Eye,
   Flag,
   ImagePlus,
+  Link2,
   ListChecks,
   Loader2,
   Lock,
@@ -1937,13 +1938,21 @@ function FirstRunScreen({
   profileName: string;
   suggestedName: string;
   onComplete: (
-    profile: Pick<UserProfile, "name" | "headline" | "defaultBio" | "location" | "networkingRole">,
+    profile: Pick<
+      UserProfile,
+      "name" | "headline" | "defaultBio" | "location" | "organization" | "school" | "interests" | "privateContext" | "networkingRole"
+    >,
     links: Array<Pick<UserLink, "label" | "type" | "url">>
   ) => void;
 }) {
   const [step, setStep] = useState<"identity" | "links">("identity");
   const [name, setName] = useState(profileName || suggestedName);
   const [headline, setHeadline] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [school, setSchool] = useState("");
+  const [location, setLocation] = useState("");
+  const [interests, setInterests] = useState("");
+  const [privateContext, setPrivateContext] = useState("");
   const [networkingRole, setNetworkingRole] = useState<NetworkingRole>("exploring");
   const [links, setLinks] = useState<Array<Pick<UserLink, "label" | "type" | "url">>>([]);
   const [linkType, setLinkType] = useState<LinkType>("linkedin");
@@ -1988,7 +1997,11 @@ function FirstRunScreen({
         name: name.trim(),
         headline: headline.trim(),
         defaultBio: "",
-        location: "",
+        location: location.trim(),
+        organization: organization.trim(),
+        school: school.trim(),
+        interests: interests.trim(),
+        privateContext: privateContext.trim(),
         networkingRole
       },
       links
@@ -2025,10 +2038,10 @@ function FirstRunScreen({
           <form onSubmit={continueToLinks} className="space-y-4 rounded-lg border border-line bg-white p-4 shadow-sm lg:p-6">
             <div>
               <div className="app-kicker text-cobalt">Step 1 of 2</div>
-              <h2 className="mt-1 text-xl font-black text-ink">How should people see you?</h2>
-              <p className="app-info-copy mt-2 text-slate-600">Your name is used on the QR card you choose to share.</p>
+              <h2 className="mt-1 text-xl font-black text-ink">Set up your personal profile.</h2>
+              <p className="app-info-copy mt-2 text-slate-600">Only your name is required. The rest makes research and follow-up more useful.</p>
             </div>
-            <Field label="Name">
+            <Field label="Name (required)">
               <input
                 className={inputClass}
                 value={name}
@@ -2047,6 +2060,60 @@ function FirstRunScreen({
                 placeholder="Product designer, student founder, developer..."
               />
             </Field>
+            <p className="-mt-2 text-[11px] font-semibold leading-4 text-slate-soft">This can appear on the QR card you choose to share.</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Organization or company (optional)">
+                <input
+                  className={inputClass}
+                  value={organization}
+                  onChange={(eventChange) => setOrganization(eventChange.target.value)}
+                  placeholder="e.g. NameTags"
+                  autoComplete="organization"
+                />
+              </Field>
+              <Field label="School (optional)">
+                <input
+                  className={inputClass}
+                  value={school}
+                  onChange={(eventChange) => setSchool(eventChange.target.value)}
+                  placeholder="e.g. NYU"
+                />
+              </Field>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="City (optional)">
+                <input
+                  className={inputClass}
+                  value={location}
+                  onChange={(eventChange) => setLocation(eventChange.target.value)}
+                  placeholder="e.g. New York"
+                  autoComplete="address-level2"
+                />
+              </Field>
+              <Field label="Interests (optional)">
+                <input
+                  className={inputClass}
+                  value={interests}
+                  onChange={(eventChange) => setInterests(eventChange.target.value)}
+                  placeholder="e.g. startups, design, baseball"
+                />
+              </Field>
+            </div>
+            <section className="rounded-lg border border-mint/25 bg-mint/10 p-3">
+              <div className="flex items-center gap-2 text-xs font-black text-teal-800">
+                <Lock className="size-3.5" />
+                Private background (optional)
+              </div>
+              <p className="mt-1 text-[11px] font-semibold leading-5 text-teal-800/80">
+                Paste a short LinkedIn About, CV summary, or what you are hoping to do. NameTags uses it for tailored research only. It never appears on your QR card.
+              </p>
+              <textarea
+                className={`${inputClass} mt-3 min-h-24 resize-y`}
+                value={privateContext}
+                onChange={(eventChange) => setPrivateContext(eventChange.target.value)}
+                placeholder="I am a CS student interning in New York and exploring product roles..."
+              />
+            </section>
             <details className="rounded-lg border border-line bg-wash p-3">
               <summary className="cursor-pointer text-xs font-black text-ink">
                 Personalize my event help <span className="font-semibold text-slate-soft">(optional)</span>
@@ -2065,12 +2132,27 @@ function FirstRunScreen({
           <div className="space-y-4 rounded-lg border border-line bg-white p-4 shadow-sm lg:p-6">
             <div>
               <div className="app-kicker text-cobalt">Step 2 of 2</div>
-              <h2 className="mt-1 text-xl font-black text-ink">Add a link for your first QR.</h2>
-              <p className="app-info-copy mt-2 text-slate-600">Recommended, not required. You will choose exactly which links appear for each event.</p>
+              <h2 className="mt-1 text-xl font-black text-ink">What should someone open after they scan?</h2>
+              <p className="app-info-copy mt-2 text-slate-600">Add a useful way to continue the conversation. You decide which links appear for each event later.</p>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              {commonLinkTypes.slice(0, 6).map((type) => {
+            <section className="rounded-lg border border-cobalt/20 bg-cobalt/5 p-3">
+              <div className="flex items-start gap-2.5">
+                <span className="grid size-8 shrink-0 place-items-center rounded-md bg-white text-cobalt shadow-sm">
+                  <Link2 className="size-4" />
+                </span>
+                <div>
+                  <div className="text-xs font-black text-cobalt">Why add a link?</div>
+                  <p className="mt-1 text-[11px] font-semibold leading-5 text-cobalt/80">
+                    A QR card gives someone one clear next step after you meet. Add LinkedIn, Instagram, your portfolio, or any link you would genuinely be comfortable sharing.
+                  </p>
+                  <p className="mt-1 text-[11px] font-bold leading-4 text-cobalt">Nothing is public until you select it for an event.</p>
+                </div>
+              </div>
+            </section>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {(["linkedin", "instagram", "github", "portfolio", "resume", "email", "line", "website", "other"] as LinkType[]).map((type) => {
                 const Icon = linkTypeIcons[type];
                 const selected = activeLinkType === type;
                 return (
@@ -2081,12 +2163,15 @@ function FirstRunScreen({
                       setLinkType(type);
                       setLinkError("");
                     }}
-                    className={`flex min-h-11 items-center gap-2 rounded-lg border px-2.5 text-left text-xs font-black transition ${
-                      selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink hover:bg-wash"
+                    className={`flex min-h-11 items-center justify-between gap-2 rounded-lg border px-2.5 text-left text-xs font-black transition ${
+                      selected ? "border-cobalt bg-cobalt text-white shadow-sm" : "border-line bg-white text-ink hover:border-ink hover:bg-wash"
                     }`}
                   >
-                    <Icon className="size-3.5 shrink-0" />
-                    <span className="truncate">{linkTypeLabels[type]}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Icon className="size-3.5 shrink-0" />
+                      <span className="truncate">{linkTypeLabels[type]}</span>
+                    </span>
+                    {selected && <CheckCircle2 className="size-3.5 shrink-0" />}
                   </button>
                 );
               })}
