@@ -33,11 +33,13 @@ const modeCopy: Record<AuthMode, { eyebrow: string; title: string; body: string 
 export function AuthScreen({
   onTryDemo,
   initialMode = "sign-in",
-  onPasswordUpdated
+  onPasswordUpdated,
+  onContinueAsGuest
 }: {
   onTryDemo: () => void;
   initialMode?: AuthMode;
   onPasswordUpdated?: () => void;
+  onContinueAsGuest?: () => void;
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -239,6 +241,16 @@ export function AuthScreen({
           <section className="space-y-3 rounded-lg border border-line bg-white p-4 shadow-sm">
             {mode === "sign-in" && (
               <>
+                {onContinueAsGuest && (
+                  <button
+                    type="button"
+                    onClick={onContinueAsGuest}
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-bold text-ink transition hover:border-ink hover:bg-wash"
+                  >
+                    <ArrowLeft className="size-4" />
+                    Continue on this device
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onTryDemo}

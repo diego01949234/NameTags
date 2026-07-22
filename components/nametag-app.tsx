@@ -189,6 +189,7 @@ export function NametagApp() {
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("saved");
   const [demoMode, setDemoMode] = useState(false);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
+  const [authScreenOpen, setAuthScreenOpen] = useState(false);
   const demoWorkspaceRef = useRef<NametagState | null>(null);
   const syncedWorkspaceRef = useRef("");
   const workspaceStorageMode: WorkspaceStorageMode = demoMode ? "sample" : session ? "account" : "device";
@@ -892,7 +893,9 @@ export function NametagApp() {
   if (authConfigured && passwordRecoveryMode && session) {
     return <AuthScreen onTryDemo={startDemoEvent} initialMode="reset-password" onPasswordUpdated={() => setPasswordRecoveryMode(false)} />;
   }
-  if (authConfigured && !session && !demoMode) return <AuthScreen onTryDemo={startDemoEvent} />;
+  if (authConfigured && authScreenOpen && !session && !demoMode) {
+    return <AuthScreen onTryDemo={startDemoEvent} onContinueAsGuest={() => setAuthScreenOpen(false)} />;
+  }
   if (authConfigured && session && !demoMode && !cloudReady) return <AccountLoadingScreen />;
 
   function addEventNote(body: string) {
@@ -967,6 +970,7 @@ export function NametagApp() {
             onOpenSettings={() => setView("vault")}
             onPrepareEvent={startNewEvent}
             onSignOut={() => void signOut()}
+            onSignIn={() => setAuthScreenOpen(true)}
           />
         )}
       <section
@@ -980,7 +984,7 @@ export function NametagApp() {
             <PhoneTop
               setView={setView}
               onOpenMenu={() => setMenuOpen(true)}
-              hasOnboarded={Boolean(session)}
+              hasOnboarded={hasOnboarded}
               activeEventName={activeEvent?.name ?? "Your next room"}
             />
             </div>
@@ -1028,6 +1032,7 @@ export function NametagApp() {
                   workspaceStorageMode={workspaceStorageMode}
                   accountSyncAvailable={authConfigured}
                   onSignOut={() => void signOut()}
+                  onSignIn={() => setAuthScreenOpen(true)}
                 />
               )}
               {view === "home" && (
@@ -1141,14 +1146,19 @@ export function NametagApp() {
               )}
             </div>
             <div className="lg:hidden">
-            {session && menuOpen && (
+            {menuOpen && (
               <AppMenu
-                accountName={getAccountDisplayName(session.user)}
+                accountName={getAccountDisplayName(session?.user) || state.profile.name}
                 accountEmail={session?.user.email}
                 cloudStatus={cloudStatus}
                 workspaceStorageMode={workspaceStorageMode}
+                accountSyncAvailable={authConfigured}
                 onClose={() => setMenuOpen(false)}
                 onSignOut={() => void signOut()}
+                onSignIn={() => {
+                  setMenuOpen(false);
+                  setAuthScreenOpen(true);
+                }}
               />
             )}
             </div>
@@ -1402,7 +1412,8 @@ function DesktopSidebar({
   onFollowUp,
   onOpenSettings,
   onPrepareEvent,
-  onSignOut
+  onSignOut,
+  onSignIn
 }: {
   view: View;
   activeEvent?: Event;
@@ -1419,6 +1430,7 @@ function DesktopSidebar({
   onOpenSettings: () => void;
   onPrepareEvent: () => void;
   onSignOut: () => void;
+  onSignIn: () => void;
 }) {
   const items: Array<{
     label: string;
@@ -1518,6 +1530,15 @@ function DesktopSidebar({
               <LogOut className="size-4" />
             </button>
           )}
+          {workspaceStorageMode === "device" && accountSyncAvailable && (
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="shrink-0 text-xs font-bold text-cobalt transition hover:text-ink"
+            >
+              Sign in
+            </button>
+          )}
         </div>
       </div>
     </aside>
@@ -1578,15 +1599,19 @@ function AppMenu({
   accountEmail,
   cloudStatus,
   workspaceStorageMode,
+  accountSyncAvailable,
   onClose,
-  onSignOut
+  onSignOut,
+  onSignIn
 }: {
   accountName: string;
   accountEmail?: string;
   cloudStatus: CloudStatus;
   workspaceStorageMode: WorkspaceStorageMode;
+  accountSyncAvailable: boolean;
   onClose: () => void;
   onSignOut: () => void;
+  onSignIn: () => void;
 }) {
   return (
     <div className="fixed inset-0 z-50 bg-ink/45 p-3 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-label="Account menu">
@@ -1638,6 +1663,18 @@ function AppMenu({
             >
               <LogOut className="size-4" />
               Sign out
+            </button>
+          </div>
+        )}
+        {workspaceStorageMode === "device" && accountSyncAvailable && (
+          <div className="mt-auto border-t border-line bg-wash p-4">
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-black text-white transition hover:bg-cobalt"
+            >
+              Sign in to sync across devices
+              <ArrowRight className="size-4" />
             </button>
           </div>
         )}
@@ -1868,7 +1905,7 @@ function FirstRunScreen({
           <ArrowRight className="size-4" />
         </PrimaryButton>
         <p className="text-center text-xs font-semibold leading-5 text-slate-soft">
-          Your changes save automatically to your account.
+          Your details save privately on this device. You can sign in later to sync across devices.
         </p>
       </div>
     </form>
@@ -2591,7 +2628,8 @@ function VaultScreen({
   cloudStatus,
   workspaceStorageMode,
   accountSyncAvailable,
-  onSignOut
+  onSignOut,
+  onSignIn
 }: {
   state: NametagState;
   updateProfile: (patch: Partial<UserProfile>) => void;
@@ -2604,6 +2642,7 @@ function VaultScreen({
   workspaceStorageMode: WorkspaceStorageMode;
   accountSyncAvailable: boolean;
   onSignOut: () => void;
+  onSignIn: () => void;
 }) {
   const [linkError, setLinkError] = useState("");
   const [savedLinkErrors, setSavedLinkErrors] = useState<Record<string, string>>({});
@@ -2675,6 +2714,16 @@ function VaultScreen({
           >
             <LogOut className="size-4" />
             Sign out
+          </button>
+        )}
+        {workspaceStorageMode === "device" && accountSyncAvailable && (
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-ink px-3 text-sm font-black text-white transition hover:bg-cobalt"
+          >
+            Sign in to sync across devices
+            <ArrowRight className="size-4" />
           </button>
         )}
       </section>

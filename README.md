@@ -53,6 +53,7 @@ NameTags is designed as a quiet, mobile-first companion rather than a crowded CR
 - **Explicit consent:** A scanner can save a card without giving anything back, or deliberately choose to share their own contact and note.
 - **Human-controlled follow-up:** AI prepares the context and a draft; the owner can edit, copy, mark sent, or mark done. There is no automatic outreach.
 - **Responsive by default:** The owner workspace works as an app-like mobile experience while desktop gives research and event planning more room.
+- **Guest-first:** No account is required to start. Guest workspaces save privately in the current browser; signing in is optional and adds cross-device sync through Supabase.
 
 ## Run Locally
 
