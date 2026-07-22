@@ -230,6 +230,8 @@ export type EventNote = {
 };
 
 export type NametagState = {
+  /** True only after the owner has completed the lightweight name/link setup. */
+  setupComplete: boolean;
   profile: UserProfile;
   links: UserLink[];
   events: Event[];

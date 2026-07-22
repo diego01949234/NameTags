@@ -36,6 +36,7 @@ export const goalLabels = {
 } as const;
 
 export const initialState: NametagState = {
+  setupComplete: false,
   profile: {
     id: "user_local",
     name: "",

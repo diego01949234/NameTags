@@ -248,7 +248,7 @@ export function AuthScreen({
                     className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 text-sm font-bold text-ink transition hover:border-ink hover:bg-wash"
                   >
                     <ArrowLeft className="size-4" />
-                    Continue on this device
+                    Continue as guest
                   </button>
                 )}
                 <button
@@ -266,7 +266,7 @@ export function AuthScreen({
                 </button>
                 <div className="flex items-center gap-3 py-1 text-[10px] font-black uppercase tracking-normal text-slate-soft">
                   <span className="h-px flex-1 bg-line" />
-                  sign in to save your own events
+                  or sign in to sync across devices
                   <span className="h-px flex-1 bg-line" />
                 </div>
               </>

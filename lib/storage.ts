@@ -17,9 +17,13 @@ export function loadState(): NametagState {
 }
 
 export function normalizeState(parsed: Partial<NametagState>): NametagState {
+  const legacySetupComplete = Boolean(
+    parsed.profile?.name?.trim() || parsed.links?.length || parsed.events?.length || parsed.cards?.length
+  );
   const state: NametagState = {
     ...initialState,
     ...parsed,
+    setupComplete: parsed.setupComplete ?? legacySetupComplete,
     profile: { ...initialState.profile, ...parsed.profile },
     links: parsed.links ?? [],
     events: parsed.events ?? [],

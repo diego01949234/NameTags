@@ -37,6 +37,7 @@ import {
 import { QRShare } from "@/components/qr-share";
 import { AccountLoadingScreen, AuthScreen } from "@/components/auth-screen";
 import {
+  BrandMark,
   CheckLine,
   EmptyState,
   Field,
@@ -81,6 +82,7 @@ type RoomView = "brief" | "card" | "share" | "debrief";
 type ManualContactInput = Pick<Contact, "name" | "contact" | "note" | "promise" | "priority">;
 type CloudStatus = "saved" | "saving" | "error";
 type WorkspaceStorageMode = "account" | "device" | "sample";
+type OnboardingStage = "welcome" | "setup";
 type EventScreenshot = { dataUrl: string; name: string };
 type EventBriefResponse = {
   ok?: boolean;
@@ -190,6 +192,7 @@ export function NametagApp() {
   const [demoMode, setDemoMode] = useState(false);
   const [passwordRecoveryMode, setPasswordRecoveryMode] = useState(false);
   const [authScreenOpen, setAuthScreenOpen] = useState(false);
+  const [onboardingStage, setOnboardingStage] = useState<OnboardingStage>("welcome");
   const demoWorkspaceRef = useRef<NametagState | null>(null);
   const syncedWorkspaceRef = useRef("");
   const workspaceStorageMode: WorkspaceStorageMode = demoMode ? "sample" : session ? "account" : "device";
@@ -202,15 +205,7 @@ export function NametagApp() {
     const loaded = loadState();
     setState(loaded);
     setActiveCardId(loaded.cards[0]?.id ?? "");
-    setHasOnboarded(
-      Boolean(
-        loaded.profile.name ||
-          loaded.profile.headline ||
-          loaded.profile.defaultBio ||
-          loaded.links.length ||
-          loaded.events.length
-      )
-    );
+    setHasOnboarded(hasCompletedSetup(loaded));
     setHydrated(true);
     setOrigin(window.location.origin);
   }, []);
@@ -272,7 +267,7 @@ export function NametagApp() {
       if (error) {
         const workspace = createInitialWorkspaceForAccount(stateRef.current, userId, accountName);
         setState(workspace);
-        setHasOnboarded(hasWorkspaceContent(workspace));
+        setHasOnboarded(hasCompletedSetup(workspace));
         setCloudStatus("error");
         setCloudReady(true);
         return;
@@ -282,12 +277,12 @@ export function NametagApp() {
         const workspace = claimStateForUser(normalizeState(data.state as Partial<NametagState>), userId, accountName);
         syncedWorkspaceRef.current = workspaceFingerprint(workspace);
         setState(workspace);
-        setHasOnboarded(hasWorkspaceContent(workspace));
+        setHasOnboarded(hasCompletedSetup(workspace));
         setCloudStatus("saved");
       } else {
         const workspace = createInitialWorkspaceForAccount(stateRef.current, userId, accountName);
         setState(workspace);
-        setHasOnboarded(hasWorkspaceContent(workspace));
+        setHasOnboarded(hasCompletedSetup(workspace));
         const { error: saveError } = await saveWorkspace(userId, workspace);
         if (cancelled) return;
         if (!saveError) syncedWorkspaceRef.current = workspaceFingerprint(workspace);
@@ -338,7 +333,7 @@ export function NametagApp() {
       setActiveCardId((current) =>
         workspace.cards.some((card) => card.id === current) ? current : workspace.cards[0]?.id ?? ""
       );
-      setHasOnboarded(hasWorkspaceContent(workspace));
+      setHasOnboarded(hasCompletedSetup(workspace));
       setCloudStatus("saved");
     };
 
@@ -372,7 +367,7 @@ export function NametagApp() {
       setActiveCardId((current) =>
         workspace.cards.some((card) => card.id === current) ? current : workspace.cards[0]?.id ?? ""
       );
-      setHasOnboarded(hasWorkspaceContent(workspace));
+      setHasOnboarded(hasCompletedSetup(workspace));
       setCloudStatus("saved");
     };
 
@@ -773,7 +768,7 @@ export function NametagApp() {
       const workspace = demoWorkspaceRef.current ?? initialState;
       setDemoMode(false);
       setState(workspace);
-      setHasOnboarded(hasWorkspaceContent(workspace));
+      setHasOnboarded(hasCompletedSetup(workspace));
       setActiveCardId(workspace.cards[0]?.id ?? "");
     }
     setEventDescription("");
@@ -819,7 +814,7 @@ export function NametagApp() {
 
     setState(remainingWorkspace);
     setActiveCardId(remainingWorkspace.cards[0]?.id ?? "");
-    setHasOnboarded(hasWorkspaceContent(remainingWorkspace));
+    setHasOnboarded(hasCompletedSetup(remainingWorkspace));
     setView("home");
   }
 
@@ -858,7 +853,7 @@ export function NametagApp() {
       const remainingWorkspace = removeEventFromWorkspace(state, targetEvent.id);
       setState(remainingWorkspace);
       setActiveCardId(remainingWorkspace.cards[0]?.id ?? "");
-      setHasOnboarded(hasWorkspaceContent(remainingWorkspace));
+      setHasOnboarded(hasCompletedSetup(remainingWorkspace));
       setView("home");
       setEventToDelete(null);
     } catch (error) {
@@ -886,6 +881,8 @@ export function NametagApp() {
     setDemoMode(false);
     setEventToDelete(null);
     setPasswordRecoveryMode(false);
+    setAuthScreenOpen(false);
+    setOnboardingStage("welcome");
     demoWorkspaceRef.current = null;
   }
 
@@ -894,7 +891,15 @@ export function NametagApp() {
     return <AuthScreen onTryDemo={startDemoEvent} initialMode="reset-password" onPasswordUpdated={() => setPasswordRecoveryMode(false)} />;
   }
   if (authConfigured && authScreenOpen && !session && !demoMode) {
-    return <AuthScreen onTryDemo={startDemoEvent} onContinueAsGuest={() => setAuthScreenOpen(false)} />;
+    return (
+      <AuthScreen
+        onTryDemo={startDemoEvent}
+        onContinueAsGuest={() => {
+          setAuthScreenOpen(false);
+          if (!hasOnboarded) setOnboardingStage("setup");
+        }}
+      />
+    );
   }
   if (authConfigured && session && !demoMode && !cloudReady) return <AccountLoadingScreen />;
 
@@ -980,14 +985,16 @@ export function NametagApp() {
             : "onboarding-shell lg:mx-auto lg:min-h-[680px] lg:max-w-[1080px] lg:bg-transparent"
         }`}
       >
-            <div className="lg:hidden">
-            <PhoneTop
-              setView={setView}
-              onOpenMenu={() => setMenuOpen(true)}
-              hasOnboarded={hasOnboarded}
-              activeEventName={activeEvent?.name ?? "Your next room"}
-            />
-            </div>
+            {hasOnboarded && (
+              <div className="lg:hidden">
+                <PhoneTop
+                  setView={setView}
+                  onOpenMenu={() => setMenuOpen(true)}
+                  hasOnboarded={hasOnboarded}
+                  activeEventName={activeEvent?.name ?? "Your next room"}
+                />
+              </div>
+            )}
             {hasOnboarded && (
               <DesktopTopbar
                 view={view}
@@ -998,25 +1005,48 @@ export function NametagApp() {
               />
             )}
             <div
-              className={`workspace-scroll mobile-top-clearance safe-bottom min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 ${
+              className={`workspace-scroll safe-bottom min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 ${
                 hasOnboarded
-                  ? "mobile-nav-clearance lg:h-[calc(100dvh-72px)] lg:px-10 lg:py-8 xl:px-12"
+                  ? "mobile-top-clearance mobile-nav-clearance lg:h-[calc(100dvh-72px)] lg:px-10 lg:py-8 xl:px-12"
                   : "lg:min-h-[680px] lg:px-0 lg:py-0"
               }`}
             >
               <div className={hasOnboarded ? "lg:mx-auto lg:max-w-[1240px]" : ""}>
               {!hasOnboarded ? (
-                <FirstRunScreen
-                  profileName={state.profile.name}
-                  onCreate={(profile) => {
-                    setState((current) => ({
-                      ...current,
-                      profile: { ...current.profile, ...profile }
-                    }));
-                    setHasOnboarded(true);
-                    setView("prep");
-                  }}
-                />
+                !session && onboardingStage === "welcome" ? (
+                  <WelcomeScreen
+                    authConfigured={authConfigured}
+                    onContinueAsGuest={() => setOnboardingStage("setup")}
+                    onSignIn={() => setAuthScreenOpen(true)}
+                    onTryDemo={startDemoEvent}
+                  />
+                ) : (
+                  <FirstRunScreen
+                    profileName={state.profile.name}
+                    suggestedName={getAccountDisplayName(session?.user)}
+                    onComplete={(profile, links) => {
+                      setState((current) => ({
+                        ...current,
+                        setupComplete: true,
+                        profile: { ...current.profile, ...profile },
+                        links: [
+                          ...links.map((link) => ({
+                            id: makeId("link"),
+                            userId: current.profile.id,
+                            label: link.label,
+                            type: link.type,
+                            url: link.url,
+                            isSensitive: false
+                          })),
+                          ...current.links
+                        ]
+                      }));
+                      setHasOnboarded(true);
+                      setOnboardingStage("welcome");
+                      setView("prep");
+                    }}
+                  />
+                )
               ) : (
                 <>
               {view === "vault" && (
@@ -1235,12 +1265,13 @@ function getWorkspaceStorageBadge(mode: WorkspaceStorageMode, status: CloudStatu
 }
 
 function claimStateForUser(workspace: NametagState, userId: string, accountName = ""): NametagState {
+  const fallbackName = workspace.setupComplete ? accountName : "";
   return {
     ...workspace,
     profile: {
       ...workspace.profile,
       id: userId,
-      name: workspace.profile.name.trim() || accountName
+      name: workspace.profile.name.trim() || fallbackName
     },
     links: workspace.links.map((link) => ({ ...link, userId })),
     events: workspace.events.map((event) => ({ ...event, userId })),
@@ -1255,14 +1286,8 @@ function createInitialWorkspaceForAccount(localWorkspace: NametagState, userId: 
   return claimStateForUser(canImportDeviceWorkspace ? localWorkspace : initialState, userId, accountName);
 }
 
-function hasWorkspaceContent(workspace: NametagState) {
-  return Boolean(
-    workspace.profile.name ||
-      workspace.profile.headline ||
-      workspace.profile.defaultBio ||
-      workspace.links.length ||
-      workspace.events.length
-  );
+function hasCompletedSetup(workspace: NametagState) {
+  return workspace.setupComplete;
 }
 
 function removeEventFromWorkspace(workspace: NametagState, eventId: string): NametagState {
@@ -1810,105 +1835,331 @@ function AppNavButton({
   );
 }
 
-function FirstRunScreen({
-  profileName,
-  onCreate
+function WelcomeScreen({
+  authConfigured,
+  onContinueAsGuest,
+  onSignIn,
+  onTryDemo
 }: {
-  profileName: string;
-  onCreate: (profile: Pick<UserProfile, "name" | "headline" | "defaultBio" | "location" | "networkingRole">) => void;
+  authConfigured: boolean;
+  onContinueAsGuest: () => void;
+  onSignIn: () => void;
+  onTryDemo: () => void;
 }) {
-  const [name, setName] = useState(profileName);
-  const [headline, setHeadline] = useState("");
-  const [networkingRole, setNetworkingRole] = useState<NetworkingRole>("exploring");
-
-  function createIdentity(eventSubmit: FormEvent<HTMLFormElement>) {
-    eventSubmit.preventDefault();
-    if (!name.trim()) return;
-    onCreate(
-      {
-        name: name.trim(),
-        headline: headline.trim(),
-        defaultBio: "",
-        location: "",
-        networkingRole
-      }
-    );
-  }
-
   return (
-    <form onSubmit={createIdentity} className="space-y-5 pb-4 pt-5 lg:grid lg:min-h-[680px] lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.82fr)] lg:gap-8 lg:space-y-0 lg:py-8">
+    <div className="space-y-5 pb-4 pt-5 lg:grid lg:min-h-[680px] lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.82fr)] lg:gap-8 lg:space-y-0 lg:py-8">
       <section className="flex overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm lg:min-h-[560px] lg:flex-col lg:rounded-xl">
         <div className="h-2 bg-coral" />
-        <div className="flex flex-1 flex-col p-4 lg:p-8">
-          <div className="font-badge-mono text-[10px] font-black tracking-normal text-coral">nametags</div>
-          <h1 className="mt-3 text-3xl font-black leading-8 tracking-tight lg:max-w-[480px] lg:text-[40px] lg:leading-[46px]">
-            Networking, without the pressure.
-          </h1>
-          <p className="mt-3 max-w-[460px] text-sm font-semibold leading-6 text-white/70 lg:text-base lg:leading-7">
-            See the room clearly, share one QR, and leave with a follow-up plan.
-          </p>
-
-          <div className="hidden border-t border-white/10 pt-5 lg:mt-auto lg:grid lg:grid-cols-3 lg:gap-3">
+        <div className="flex flex-1 flex-col p-5 lg:p-8">
+          <BrandMark inverse />
+          <div className="mt-12 lg:mt-auto">
+            <div className="app-kicker text-coral">Before, during, after</div>
+            <h1 className="mt-3 max-w-[500px] text-3xl font-black leading-8 tracking-tight lg:text-[40px] lg:leading-[46px]">
+              A calmer way into every room.
+            </h1>
+            <p className="mt-3 max-w-[480px] text-sm font-semibold leading-6 text-white/70 lg:text-base lg:leading-7">
+              Research an event while you are on the way, share one focused QR card, and turn the conversations that mattered into follow-through.
+            </p>
+          </div>
+          <div className="mt-7 grid grid-cols-3 gap-2 border-t border-white/10 pt-5">
             {[
-              ["Before", "Know the room"],
-              ["During", "Share one QR"],
-              ["After", "Keep the next step"]
-            ].map(([moment, detail]) => (
-              <div key={moment} className="rounded-lg border border-white/10 bg-white/[0.06] p-3">
-                <div className="app-kicker text-mint">{moment}</div>
-                <div className="mt-1 text-xs font-bold leading-5 text-white/86">{detail}</div>
+              ["01", "Research"],
+              ["02", "Share"],
+              ["03", "Follow up"]
+            ].map(([number, label]) => (
+              <div key={number} className="rounded-lg border border-white/10 bg-white/[0.06] p-2.5">
+                <div className="font-badge-mono text-[10px] font-black text-mint">{number}</div>
+                <div className="mt-1 text-xs font-bold text-white/90">{label}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="space-y-4 lg:flex lg:min-h-[560px] lg:flex-col lg:justify-center">
+      <section className="space-y-4 lg:flex lg:min-h-[560px] lg:flex-col lg:justify-center">
         <div className="lg:px-1">
-          <div className="app-kicker text-cobalt">Start simply</div>
-          <h2 className="mt-1 text-xl font-bold text-ink lg:text-2xl">Make your first event easier.</h2>
-          <p className="app-info-copy mt-2 text-slate-600">Just a name is enough. Add links only when they help.</p>
+          <div className="app-kicker text-cobalt">Start your workspace</div>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-ink">How would you like to start?</h2>
+          <p className="app-info-copy mt-2 text-slate-600">No account is required to plan an event. You choose when to sync across devices.</p>
         </div>
 
-        <div className="space-y-4 rounded-lg border border-line bg-white p-4 shadow-sm lg:p-6">
-          <Field label="Name">
-            <input
-              className={inputClass}
-              value={name}
-              onChange={(eventChange) => setName(eventChange.target.value)}
-              placeholder="How people should see you"
-              autoComplete="name"
-              required
-            />
-          </Field>
-          <Field label="What you do (optional)">
-            <input
-              className={inputClass}
-              value={headline}
-              onChange={(eventChange) => setHeadline(eventChange.target.value)}
-              placeholder="Product designer, student founder, developer..."
-            />
-          </Field>
-          <details className="rounded-lg border border-line bg-wash p-3">
-            <summary className="cursor-pointer text-xs font-black text-ink">
-              Personalize my event help <span className="font-semibold text-slate-soft">(optional)</span>
-            </summary>
-            <p className="mt-2 text-xs font-semibold leading-5 text-slate-soft">
-              Tell NameTag what kinds of rooms you usually enter. You can always change this in Settings.
-            </p>
-            <RolePicker value={networkingRole} onChange={setNetworkingRole} className="mt-3" />
-          </details>
+        <div className="space-y-3 rounded-lg border border-line bg-white p-4 shadow-sm lg:p-6">
+          <button
+            type="button"
+            onClick={onContinueAsGuest}
+            className="flex min-h-[94px] w-full items-center justify-between gap-3 rounded-lg bg-ink px-4 py-3 text-left text-white transition hover:bg-cobalt"
+          >
+            <span>
+              <span className="app-kicker text-mint">No account needed</span>
+              <span className="mt-1 block text-base font-black">Continue as guest</span>
+              <span className="mt-1 block text-xs font-semibold leading-5 text-white/70">Set up your name and links on this device.</span>
+            </span>
+            <ArrowRight className="size-5 shrink-0" />
+          </button>
+
+          {authConfigured && (
+            <button
+              type="button"
+              onClick={onSignIn}
+              className="flex min-h-[62px] w-full items-center justify-between gap-3 rounded-lg border border-line bg-white px-4 py-3 text-left transition hover:border-ink hover:bg-wash"
+            >
+              <span>
+                <span className="block text-sm font-black text-ink">Sign in or create an account</span>
+                <span className="mt-1 block text-xs font-semibold leading-5 text-slate-soft">Return to your workspace on any device.</span>
+              </span>
+              <ArrowRight className="size-4 shrink-0 text-cobalt" />
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onTryDemo}
+            className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#e9ad88] bg-[#fff0e5] px-3 text-sm font-black text-[#7f3322] transition hover:border-[#c86b48] hover:bg-[#ffe2ce]"
+          >
+            Explore a sample event
+            <ArrowRight className="size-4" />
+          </button>
         </div>
 
-        <PrimaryButton type="submit">
-          Start an event
-          <ArrowRight className="size-4" />
-        </PrimaryButton>
-        <p className="text-center text-xs font-semibold leading-5 text-slate-soft">
-          Your details save privately on this device. You can sign in later to sync across devices.
+        <p className="px-1 text-center text-xs font-semibold leading-5 text-slate-soft">
+          Guest workspaces stay in this browser. Your notes and follow-up queue never appear on a QR card.
         </p>
-      </div>
-    </form>
+      </section>
+    </div>
+  );
+}
+
+function FirstRunScreen({
+  profileName,
+  suggestedName,
+  onComplete
+}: {
+  profileName: string;
+  suggestedName: string;
+  onComplete: (
+    profile: Pick<UserProfile, "name" | "headline" | "defaultBio" | "location" | "networkingRole">,
+    links: Array<Pick<UserLink, "label" | "type" | "url">>
+  ) => void;
+}) {
+  const [step, setStep] = useState<"identity" | "links">("identity");
+  const [name, setName] = useState(profileName || suggestedName);
+  const [headline, setHeadline] = useState("");
+  const [networkingRole, setNetworkingRole] = useState<NetworkingRole>("exploring");
+  const [links, setLinks] = useState<Array<Pick<UserLink, "label" | "type" | "url">>>([]);
+  const [linkType, setLinkType] = useState<LinkType>("linkedin");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkLabel, setLinkLabel] = useState("");
+  const [linkError, setLinkError] = useState("");
+  const inferredLinkType = inferLinkType(linkUrl);
+  const activeLinkType = inferredLinkType ?? linkType;
+
+  function continueToLinks(eventSubmit: FormEvent<HTMLFormElement>) {
+    eventSubmit.preventDefault();
+    if (!name.trim()) return;
+    setStep("links");
+  }
+
+  function addSetupLink() {
+    const normalized = normalizeLinkUrl(linkUrl, activeLinkType);
+    if ("error" in normalized) {
+      setLinkError(normalized.error ?? "That link could not be added.");
+      return;
+    }
+    if (links.some((link) => link.url === normalized.url)) {
+      setLinkError("That link is already in your setup.");
+      return;
+    }
+    setLinks((current) => [
+      ...current,
+      {
+        label: linkLabel.trim() || defaultLinkLabel(normalized.url, activeLinkType),
+        type: activeLinkType,
+        url: normalized.url
+      }
+    ]);
+    setLinkUrl("");
+    setLinkLabel("");
+    setLinkError("");
+  }
+
+  function finishSetup() {
+    onComplete(
+      {
+        name: name.trim(),
+        headline: headline.trim(),
+        defaultBio: "",
+        location: "",
+        networkingRole
+      },
+      links
+    );
+  }
+
+  return (
+    <div className="space-y-5 pb-4 pt-5 lg:grid lg:min-h-[680px] lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.82fr)] lg:gap-8 lg:space-y-0 lg:py-8">
+      <section className="flex overflow-hidden rounded-lg border border-ink bg-ink text-white shadow-sm lg:min-h-[560px] lg:flex-col lg:rounded-xl">
+        <div className="h-2 bg-coral" />
+        <div className="flex flex-1 flex-col p-5 lg:p-8">
+          <BrandMark inverse />
+          <div className="mt-10 lg:mt-auto">
+            <div className="app-kicker text-coral">Your private workspace</div>
+            <h1 className="mt-3 max-w-[500px] text-3xl font-black leading-8 tracking-tight lg:text-[40px] lg:leading-[46px]">
+              Start with the basics. Make each room easier.
+            </h1>
+            <p className="mt-3 max-w-[470px] text-sm font-semibold leading-6 text-white/70 lg:text-base lg:leading-7">
+              NameTag only needs what helps you prepare and share your own QR card. You can edit everything later in Settings.
+            </p>
+          </div>
+          <div className="mt-7 flex items-center gap-2 border-t border-white/10 pt-5 text-xs font-bold">
+            <span className={`grid size-7 place-items-center rounded-full ${step === "identity" ? "bg-coral text-white" : "bg-mint text-ink"}`}>1</span>
+            <span className={step === "identity" ? "text-white" : "text-white/55"}>Your name</span>
+            <span className="h-px flex-1 bg-white/15" />
+            <span className={`grid size-7 place-items-center rounded-full ${step === "links" ? "bg-coral text-white" : "border border-white/25 text-white/65"}`}>2</span>
+            <span className={step === "links" ? "text-white" : "text-white/55"}>Your links</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="lg:flex lg:min-h-[560px] lg:flex-col lg:justify-center">
+        {step === "identity" ? (
+          <form onSubmit={continueToLinks} className="space-y-4 rounded-lg border border-line bg-white p-4 shadow-sm lg:p-6">
+            <div>
+              <div className="app-kicker text-cobalt">Step 1 of 2</div>
+              <h2 className="mt-1 text-xl font-black text-ink">How should people see you?</h2>
+              <p className="app-info-copy mt-2 text-slate-600">Your name is used on the QR card you choose to share.</p>
+            </div>
+            <Field label="Name">
+              <input
+                className={inputClass}
+                value={name}
+                onChange={(eventChange) => setName(eventChange.target.value)}
+                placeholder="How people should see you"
+                autoComplete="name"
+                autoFocus
+                required
+              />
+            </Field>
+            <Field label="What you do (optional)">
+              <input
+                className={inputClass}
+                value={headline}
+                onChange={(eventChange) => setHeadline(eventChange.target.value)}
+                placeholder="Product designer, student founder, developer..."
+              />
+            </Field>
+            <details className="rounded-lg border border-line bg-wash p-3">
+              <summary className="cursor-pointer text-xs font-black text-ink">
+                Personalize my event help <span className="font-semibold text-slate-soft">(optional)</span>
+              </summary>
+              <p className="mt-2 text-xs font-semibold leading-5 text-slate-soft">
+                Tell NameTag what kinds of rooms you usually enter. You can always change this in Settings.
+              </p>
+              <RolePicker value={networkingRole} onChange={setNetworkingRole} className="mt-3" />
+            </details>
+            <PrimaryButton type="submit">
+              Continue to links
+              <ArrowRight className="size-4" />
+            </PrimaryButton>
+          </form>
+        ) : (
+          <div className="space-y-4 rounded-lg border border-line bg-white p-4 shadow-sm lg:p-6">
+            <div>
+              <div className="app-kicker text-cobalt">Step 2 of 2</div>
+              <h2 className="mt-1 text-xl font-black text-ink">Add a link for your first QR.</h2>
+              <p className="app-info-copy mt-2 text-slate-600">Recommended, not required. You will choose exactly which links appear for each event.</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {commonLinkTypes.slice(0, 6).map((type) => {
+                const Icon = linkTypeIcons[type];
+                const selected = activeLinkType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      setLinkType(type);
+                      setLinkError("");
+                    }}
+                    className={`flex min-h-11 items-center gap-2 rounded-lg border px-2.5 text-left text-xs font-black transition ${
+                      selected ? "border-ink bg-ink text-white" : "border-line bg-white text-ink hover:border-ink hover:bg-wash"
+                    }`}
+                  >
+                    <Icon className="size-3.5 shrink-0" />
+                    <span className="truncate">{linkTypeLabels[type]}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Field label={`${linkTypeLabels[activeLinkType]} link`}>
+              <input
+                className={inputClass}
+                value={linkUrl}
+                onChange={(eventChange) => {
+                  setLinkUrl(eventChange.target.value);
+                  setLinkError("");
+                }}
+                placeholder={activeLinkType === "email" ? "you@example.com" : "https://..."}
+                autoComplete="url"
+              />
+            </Field>
+            <Field label="Label (optional)">
+              <input
+                className={inputClass}
+                value={linkLabel}
+                onChange={(eventChange) => setLinkLabel(eventChange.target.value)}
+                placeholder={`Defaults to ${linkTypeLabels[activeLinkType]}`}
+              />
+            </Field>
+            <button
+              type="button"
+              onClick={addSetupLink}
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line bg-wash px-4 text-sm font-black text-ink transition hover:border-ink hover:bg-white"
+            >
+              <Plus className="size-4" />
+              Add this link
+            </button>
+            {linkError && <p role="alert" className="text-xs font-bold text-red-600">{linkError}</p>}
+
+            {links.length > 0 && (
+              <div className="space-y-2 border-t border-line pt-3">
+                {links.map((link) => (
+                  <div key={link.url} className="flex min-w-0 items-center gap-2 rounded-lg border border-line bg-wash p-2">
+                    <LinkIcon type={link.type} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-black text-ink">{link.label}</div>
+                      <div className="truncate text-[11px] font-semibold text-slate-soft">{link.url.replace(/^mailto:/, "")}</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLinks((current) => current.filter((item) => item.url !== link.url))}
+                      className="grid size-8 place-items-center rounded-md text-slate-soft transition hover:bg-coral/10 hover:text-coral"
+                      aria-label={`Remove ${link.label}`}
+                      title={`Remove ${link.label}`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <PrimaryButton onClick={finishSetup}>
+              Create my first event
+              <ArrowRight className="size-4" />
+            </PrimaryButton>
+            <div className="flex items-center justify-between gap-3 text-xs font-bold">
+              <button type="button" onClick={() => setStep("identity")} className="inline-flex items-center gap-1.5 text-slate-600 hover:text-ink">
+                <ArrowLeft className="size-3.5" />
+                Back
+              </button>
+              <span className="text-right text-slate-soft">No link? Add one later in Settings.</span>
+            </div>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }
 

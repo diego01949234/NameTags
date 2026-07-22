@@ -133,6 +133,7 @@ export function createDemoWorkspace(existingProfile: UserProfile): DemoWorkspace
   };
 
   return {
+    setupComplete: true,
     profile,
     links: [prototypeLink, linkedinLink],
     events: [event],
