@@ -1222,13 +1222,13 @@ function getCloudStatusText(status: CloudStatus) {
 
 function getWorkspaceStorageText(mode: WorkspaceStorageMode, status: CloudStatus) {
   if (mode === "sample") return "Sample workspace - changes are temporary";
-  if (mode === "device") return "Stored on this device only";
+  if (mode === "device") return "Guest workspace - stored on this device";
   return getCloudStatusText(status);
 }
 
 function getWorkspaceStorageBadge(mode: WorkspaceStorageMode, status: CloudStatus) {
   if (mode === "sample") return "Sample data";
-  if (mode === "device") return "This device";
+  if (mode === "device") return "Guest";
   if (status === "saving") return "Saving";
   if (status === "error") return "Check sync";
   return "Auto-save on";
@@ -1518,7 +1518,7 @@ function DesktopSidebar({
           </div>
         </div>
         <div className="mt-4 flex items-center justify-between gap-2 px-1">
-          <span className="min-w-0 truncate text-xs font-semibold text-ink">{workspaceStorageMode === "sample" ? "Sample event" : accountName || "Your NameTag account"}</span>
+          <span className="min-w-0 truncate text-xs font-semibold text-ink">{workspaceStorageMode === "sample" ? "Sample event" : workspaceStorageMode === "device" ? "Guest workspace" : accountName || "Your NameTag account"}</span>
           {workspaceStorageMode === "account" && accountEmail && (
             <button
               type="button"
@@ -1639,7 +1639,7 @@ function AppMenu({
                 <UserRound className="size-4" />
               </span>
               <div className="min-w-0">
-                <div className="truncate text-sm font-black text-ink">{workspaceStorageMode === "sample" ? "Sample event" : accountName || "Your NameTag account"}</div>
+                <div className="truncate text-sm font-black text-ink">{workspaceStorageMode === "sample" ? "Sample event" : workspaceStorageMode === "device" ? "Guest workspace" : accountName || "Your NameTag account"}</div>
                 {workspaceStorageMode === "account" && accountEmail && <div className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{accountEmail}</div>}
                 <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-slate-soft">
                   <Cloud className="size-3.5" />
@@ -2682,7 +2682,7 @@ function VaultScreen({
       <section className="space-y-3 rounded-lg border border-line bg-wash p-3">
         <SectionTitle
           icon={UserRound}
-          title={workspaceStorageMode === "account" ? "Account" : workspaceStorageMode === "sample" ? "Sample workspace" : "This device"}
+          title={workspaceStorageMode === "account" ? "Account" : workspaceStorageMode === "sample" ? "Sample workspace" : "Guest workspace"}
           action={<MiniBadge tone={workspaceStorageMode === "account" && cloudStatus === "error" ? "coral" : workspaceStorageMode === "account" ? "mint" : "blue"}>{getWorkspaceStorageBadge(workspaceStorageMode, cloudStatus)}</MiniBadge>}
         />
         <div className="flex items-start gap-3">
@@ -2690,7 +2690,7 @@ function VaultScreen({
             <UserRound className="size-4" />
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-black text-ink">{workspaceStorageMode === "sample" ? "Founder Meetup sample" : accountName || state.profile.name || "Your NameTag account"}</div>
+            <div className="truncate text-sm font-black text-ink">{workspaceStorageMode === "sample" ? "Founder Meetup sample" : workspaceStorageMode === "device" ? "Guest workspace" : accountName || state.profile.name || "Your NameTag account"}</div>
             {workspaceStorageMode === "account" && accountEmail && <div className="mt-0.5 truncate text-xs font-semibold text-slate-soft">{accountEmail}</div>}
             <div className={`mt-2 flex items-center gap-1.5 text-xs font-semibold ${workspaceStorageMode === "account" && cloudStatus === "error" ? "text-coral" : workspaceStorageMode === "account" ? "text-teal-800" : "text-slate-600"}`}>
               <Cloud className="size-3.5" />
